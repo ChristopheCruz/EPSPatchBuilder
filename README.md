@@ -60,6 +60,40 @@ between today's audio files and that stick.
 - **USB stick**: lists the slots of a Gotek stick with their contents, writes disks with
   read-back verification, copies instruments between slots by drag and drop, text catalogue.
 
+## Example disk
+
+[`floppy disks/gameboy+os.hfe`](floppy%20disks/gameboy%2Bos.hfe) is a disk made entirely with EPS Builder. It shows
+what an edited instrument looks like and can be used to try the program without preparing any
+sound.
+
+The disk is bootable: it holds the EPS operating system and one instrument, **GAME BOY**, a
+chiptune drum and effects kit built from seven short sounds spread over the keyboard.
+
+| Sound | Root note | Key zone | Length | Loop |
+|---|---|---|---|---|
+| HIHAT | F#1 | A0 – A1 | 0.04 s | – |
+| KICK | C#2 | A#1 – G2 | 0.24 s | – |
+| OPENHAT | C#3 | G#2 – F#3 | 0.15 s | – |
+| PERC | B3 | G3 – F#4 | 0.08 s | – |
+| PULSE | D5 | G4 – E5 | 0.07 s | – |
+| SFX | G5 | F5 – A5 | 0.16 s | back and forth |
+| SNARE | C6 | A#5 – C8 | 0.09 s | – |
+
+All sounds are stored at 15.6 kHz, so the whole instrument takes 58 blocks (about 29 KB) and
+leaves 1360 blocks free on the disk.
+
+**To explore it in EPS Builder:** *File → Open a disk image…*, then double-click **GAME BOY**.
+The seven sounds appear in the editor with their zones on the keyboard; select one to see its
+waveform, move its start, end or loop markers, click a key to hear it, then press *Update the
+instrument on the disk*.
+
+**To play it on an EPS:** copy the file to the Gotek USB stick under the next free slot name
+(for example `DSKA0021.hfe` with the HxC firmware), or open it in EPS Builder and use *Write to
+a new slot*. The EPS can boot directly from this slot.
+
+This disk image is not covered by the MIT licence: it contains the EPS operating system 2.49,
+which belongs to Ensoniq, and sound samples that remain the property of their authors.
+
 ## Building the Windows application
 
 A prebuilt `EPSBuilder.exe` is available on the [release page](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1); build it yourself

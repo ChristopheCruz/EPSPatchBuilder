@@ -6,3 +6,5 @@ dist/
 *.spec
 *.hfe
 *.img
+# Les disquettes d'exemple sont publiees / example disks are published
+!floppy disks/*.hfe

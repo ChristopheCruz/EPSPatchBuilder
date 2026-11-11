@@ -48,6 +48,43 @@ Trente-cinq ans plus tard, le point faible de ces machines est le lecteur de dis
 émulateur **Gotek** le remplace par une clé USB contenant des images de disquettes, et EPS
 Builder fait le lien entre les fichiers audio d'aujourd'hui et cette clé.
 
+## Disquette d'exemple
+
+[`floppy disks/gameboy+os.hfe`](floppy%20disks/gameboy%2Bos.hfe) est une disquette entièrement fabriquée avec
+EPS Builder. Elle montre à quoi ressemble un instrument édité et permet d'essayer le programme
+sans préparer de sons.
+
+La disquette est amorçable : elle contient le système de l'EPS et un instrument, **GAME BOY**,
+un kit de percussions et d'effets « chiptune » fait de sept sons courts répartis sur le clavier.
+
+| Son | Note de base | Plage | Durée | Boucle |
+|---|---|---|---|---|
+| HIHAT | F#1 | A0 – A1 | 0,04 s | – |
+| KICK | C#2 | A#1 – G2 | 0,24 s | – |
+| OPENHAT | C#3 | G#2 – F#3 | 0,15 s | – |
+| PERC | B3 | G3 – F#4 | 0,08 s | – |
+| PULSE | D5 | G4 – E5 | 0,07 s | – |
+| SFX | G5 | F5 – A5 | 0,16 s | aller-retour |
+| SNARE | C6 | A#5 – C8 | 0,09 s | – |
+
+Tous les sons sont enregistrés à 15,6 kHz : l'instrument entier occupe 58 blocs (environ
+29 Ko) et laisse 1360 blocs libres sur la disquette.
+
+**Pour l'explorer dans EPS Builder :** *Fichier → Ouvrir une image de disquette…*, puis
+double-cliquez sur **GAME BOY**. Les sept sons apparaissent dans l'éditeur avec leurs plages sur
+le clavier ; sélectionnez-en un pour voir sa forme d'onde, déplacez ses repères de début, de fin
+ou de boucle, cliquez sur une touche pour l'écouter, puis « Mettre à jour l'instrument sur la
+disquette ».
+
+**Pour la jouer sur un EPS :** copiez le fichier sur la clé USB du Gotek sous le nom du prochain
+emplacement libre (par exemple `DSKA0021.hfe` avec le firmware HxC), ou ouvrez-la dans EPS
+Builder et utilisez « Écrire dans un nouvel emplacement ». L'EPS peut démarrer directement sur
+cet emplacement.
+
+Cette image de disquette n'est pas couverte par la licence MIT : elle contient le système
+d'exploitation 2.49 de l'EPS, qui appartient à Ensoniq, et des échantillons sonores qui restent
+la propriété de leurs auteurs.
+
 ## Fabriquer l'application Windows
 
 Un `EPSBuilder.exe` déjà compilé est disponible sur la [page de la version](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1) ; ne le
