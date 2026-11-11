@@ -144,6 +144,11 @@ The full manual is in [`epsbuilder/MANUAL.md`](epsbuilder/MANUAL.md)
   not written, and FlashFloppy naming has not been tested on hardware.
 - One layer per created instrument. Detailed envelopes, filter and LFO are set on the EPS.
 
+## Support
+
+EPS Builder is free. If it is useful to you and you would like to support its development, you
+can [buy me a coffee](https://buymeacoffee.com/christophecruz).
+
 ## Licence
 
 Free software under the [MIT licence](LICENSE) — © 2026 Christophe CRUZ.

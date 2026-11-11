@@ -146,6 +146,11 @@ Le manuel complet est dans [`epsbuilder/MANUEL.md`](epsbuilder/MANUEL.md) et dan
 | `epsbuilder/audio.py` | lecture WAV, mono, rééchantillonnage, niveau |
 | `tests/test_epsbuilder.py` | tests automatiques |
 
+## Soutenir le projet
+
+EPS Builder est gratuit. S'il vous est utile et que vous souhaitez soutenir son développement,
+vous pouvez [m'offrir un café](https://buymeacoffee.com/christophecruz).
+
 ## Licence
 
 Logiciel libre sous [licence MIT](LICENSE) — © 2026 Christophe CRUZ.
