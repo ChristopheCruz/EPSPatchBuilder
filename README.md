@@ -1,0 +1,78 @@
+# EPS Builder
+
+*[Version française](README.fr.md)*
+
+EPS Builder turns audio files into instruments for the **Ensoniq EPS** sampler, stores them on
+virtual floppy disks (`.hfe`) and manages the USB stick of a **Gotek** drive (HxC or FlashFloppy
+firmware). Instruments are written in the EPS classic format, which the EPS-16+ and the ASR-10
+can also read.
+
+The application is available in English and French (menu *Langue / Language*).
+
+## Features
+
+- **Instrument editor**: drag and drop WAV, AIFF, FLAC, MP3 or OGG files (M4A, WMA and others
+  if ffmpeg is installed). The root note is read from the file name (`piano_C3.wav`).
+- **Key zones**: automatic split between root notes, or drag the zone edges on the keyboard.
+- **Sound editor**: waveform with start, end and loop markers, fades, per-sound sample rate,
+  bit reduction, dynamic compression, zero-crossing snap and automatic loop splice.
+- **Listening**: play a sound, or click a key to hear the instrument at that note (Windows).
+- **Disk**: add, delete, reorder and edit the instruments of a disk image; export sounds as WAV;
+  create a bootable disk by copying the OS from an existing one.
+- **USB stick**: lists the slots of a Gotek stick with their contents, writes disks with
+  read-back verification, copies instruments between slots by drag and drop, text catalogue.
+
+## Building the Windows application
+
+Double-click `build_windows.bat`. The script installs the dependencies in a `.venv` folder,
+runs the tests, then produces `dist\EPSBuilder.exe`. Python 3.10 or later and an Internet
+connection are needed the first time.
+
+To run without building: `pip install -r requirements.txt`, then `python -m epsbuilder`.
+
+## Quick start
+
+1. Drag audio files into the "Instrument" list, check each root note, name the instrument.
+2. Click "Add the instrument to the disk".
+3. Choose the Gotek USB stick and click "Write to a new slot".
+4. Eject the stick, plug it into the Gotek, boot the EPS from the slot that holds the OS, then
+   select the new slot and load the instrument.
+
+The full manual is in [`epsbuilder/MANUAL.md`](epsbuilder/MANUAL.md)
+([French](epsbuilder/MANUEL.md)) and in the application's Help menu.
+
+## Command line
+
+    python -m epsbuilder info -d DSKA0000.hfe
+    python -m epsbuilder build -o DSKA0001.hfe -n "MY PIANO" piano_C2.wav@C2 piano_C4.wav@C4
+    python -m epsbuilder extract DSKA0000.hfe wav_folder
+
+## Code layout
+
+| File | Role |
+|---|---|
+| `epsbuilder/gui.py` | graphical interface (PySide6) |
+| `epsbuilder/soundedit.py` | sound editor: waveform, trimming, loop |
+| `epsbuilder/usbkey.py` | USB stick: slots, verified writes, catalogue |
+| `epsbuilder/project.py` | audio file → instrument → disk pipeline |
+| `epsbuilder/instrument.py` | EPS instrument format (layers, wavesamples, zones, loops, envelope) |
+| `epsbuilder/disk.py` | Ensoniq file system (directory, allocation table) |
+| `epsbuilder/hfe.py` | HFE reading and writing (MFM) |
+| `epsbuilder/audio.py` | audio reading, mono mix, resampling, level, compression |
+| `epsbuilder/i18n.py`, `translations.py` | French and English texts |
+| `tests/test_epsbuilder.py` | automated tests |
+
+## Status and limits
+
+- Tested on a real EPS classic (OS 2.49) with a Gotek running the HxC firmware.
+- EPS classic format only (13 bits, 800 KB disks). The native EPS-16+ and ASR-10 formats are
+  not written, and FlashFloppy naming has not been tested on hardware.
+- One layer per created instrument. Detailed envelopes, filter and LFO are set on the EPS.
+
+## Licence
+
+Free software under the [MIT licence](LICENSE) — © 2026 Christophe CRUZ.
+
+Ensoniq, EPS and ASR-10 are trademarks of their respective owners; this project is not
+affiliated with any manufacturer. The file format was worked out from disks written by an EPS
+and from the Ensoniq *EPS External Command Specification*.
