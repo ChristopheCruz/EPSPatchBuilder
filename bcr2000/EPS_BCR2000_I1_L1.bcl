@@ -1,0 +1,405 @@
+; Ensoniq EPS (classic) - BCR2000 preset, SysEx PUT PARAMETER - 6bit value format
+; Target: instrument 1, layer 1, all wavesamples. EPS base channel = 1.
+; No $store: the preset lands in the BCR2000 edit buffer.
+$rev R1
+$preset
+  .name 'EPS I1 L1 ALL           '
+  .snapshot off
+  .request off
+  .egroups 4
+  .fkeys on
+  .lock off
+  .init
+$encoder 1 ; Fine Tune (4,10) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $10 $0A $00 $00 val6.11 val0.5 $F7
+$encoder 2 ; Pitch LFO Amount (4,2) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $10 $02 $00 $00 val6.11 val0.5 $F7
+$encoder 3 ; Pitch Env1 Amount (4,3) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $10 $03 $00 $00 val6.11 val0.5 $F7
+$encoder 4 ; Pitch Random Amount (4,12) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $10 $0C $00 $00 val6.11 val0.5 $F7
+$encoder 5 ; Pitch Random Freq (4,5) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $10 $05 $00 $00 val6.11 val0.5 $F7
+$encoder 6 ; Bend Range (4,6) 0-13
+  .showvalue on
+  .mode 1dot
+  .resolution 24 24 24 24
+  .default 0
+  .minmax 0 13
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $10 $06 $00 $00 val6.11 val0.5 $F7
+$encoder 7 ; Pitch Mod Amount (4,11) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $10 $0B $00 $00 val6.11 val0.5 $F7
+$encoder 8 ; Pitch Mod Source (4,7) 0-15
+  .showvalue on
+  .mode 1dot
+  .resolution 24 24 24 24
+  .default 0
+  .minmax 0 15
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $10 $07 $00 $00 val6.11 val0.5 $F7
+$encoder 9 ; LFO Wave (7,1) 0-6
+  .showvalue on
+  .mode 1dot
+  .resolution 12 12 12 12
+  .default 0
+  .minmax 0 6
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $1C $01 $00 $00 val6.11 val0.5 $F7
+$encoder 10 ; LFO Speed (7,2) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $1C $02 $00 $00 val6.11 val0.5 $F7
+$encoder 11 ; LFO Depth (7,3) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $1C $03 $00 $00 val6.11 val0.5 $F7
+$encoder 12 ; LFO Delay (7,4) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $1C $04 $00 $00 val6.11 val0.5 $F7
+$encoder 13 ; LFO Mode (7,5) 0-2
+  .showvalue on
+  .mode 1dot
+  .resolution 12 12 12 12
+  .default 0
+  .minmax 0 2
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $1C $05 $00 $00 val6.11 val0.5 $F7
+$encoder 14 ; LFO Mod Source (7,7) 0-15
+  .showvalue on
+  .mode 1dot
+  .resolution 24 24 24 24
+  .default 0
+  .minmax 0 15
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $1C $07 $00 $00 val6.11 val0.5 $F7
+$encoder 15 ; Amp Mod Source (6,7) 0-15
+  .showvalue on
+  .mode 1dot
+  .resolution 24 24 24 24
+  .default 0
+  .minmax 0 15
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $18 $07 $00 $00 val6.11 val0.5 $F7
+$encoder 16 ; Amp Mod Amount (6,10) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $18 $0A $00 $00 val6.11 val0.5 $F7
+$encoder 17 ; ENV2 Level 0 Hard (2,1) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $01 $00 $00 val6.11 val0.5 $F7
+$encoder 18 ; ENV2 Level 1 Hard (2,11) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $0B $00 $00 val6.11 val0.5 $F7
+$encoder 19 ; ENV2 Level 2 Hard (2,12) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $0C $00 $00 val6.11 val0.5 $F7
+$encoder 20 ; ENV2 Level 3 Hard (2,13) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $0D $00 $00 val6.11 val0.5 $F7
+$encoder 21 ; ENV2 Level 4 Hard (2,14) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $0E $00 $00 val6.11 val0.5 $F7
+$encoder 22 ; ENV2 2nd Release Level (2,23) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $17 $00 $00 val6.11 val0.5 $F7
+$encoder 23 ; ENV2 Mode (2,8) 0-2
+  .showvalue on
+  .mode 1dot
+  .resolution 12 12 12 12
+  .default 0
+  .minmax 0 2
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $08 $00 $00 val6.11 val0.5 $F7
+$encoder 24 ; Filter Mode (5,0) 0-3
+  .showvalue on
+  .mode 1dot
+  .resolution 12 12 12 12
+  .default 0
+  .minmax 0 3
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $14 $00 $00 $00 val6.11 val0.5 $F7
+$encoder 25 ; ENV3 Level 0 Hard (3,1) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $01 $00 $00 val6.11 val0.5 $F7
+$encoder 26 ; ENV3 Level 1 Hard (3,11) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $0B $00 $00 val6.11 val0.5 $F7
+$encoder 27 ; ENV3 Level 2 Hard (3,12) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $0C $00 $00 val6.11 val0.5 $F7
+$encoder 28 ; ENV3 Level 3 Hard (3,13) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $0D $00 $00 val6.11 val0.5 $F7
+$encoder 29 ; ENV3 Level 4 Hard (3,14) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $0E $00 $00 val6.11 val0.5 $F7
+$encoder 30 ; ENV3 2nd Release Level (3,23) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $17 $00 $00 val6.11 val0.5 $F7
+$encoder 31 ; ENV3 Mode (3,8) 0-2
+  .showvalue on
+  .mode 1dot
+  .resolution 12 12 12 12
+  .default 0
+  .minmax 0 2
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $08 $00 $00 val6.11 val0.5 $F7
+$encoder 32 ; Filter 1 Mod Source (5,7) 0-15
+  .showvalue on
+  .mode 1dot
+  .resolution 24 24 24 24
+  .default 0
+  .minmax 0 15
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $14 $07 $00 $00 val6.11 val0.5 $F7
+$encoder 33 ; Filter 1 Cutoff (5,1) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $14 $01 $00 $00 val6.11 val0.5 $F7
+$encoder 34 ; Filter 2 Cutoff (5,11) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $14 $0B $00 $00 val6.11 val0.5 $F7
+$encoder 35 ; Filter 1 Env2 Amount (5,2) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $14 $02 $00 $00 val6.11 val0.5 $F7
+$encoder 36 ; Filter 2 Env2 Amount (5,12) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $14 $0C $00 $00 val6.11 val0.5 $F7
+$encoder 37 ; Filter 1 Kbd Amount (5,3) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $14 $03 $00 $00 val6.11 val0.5 $F7
+$encoder 38 ; Filter 1 Mod Amount (5,14) 0-127 [positive half only]
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $14 $0E $00 $00 val6.11 val0.5 $F7
+$encoder 39 ; Wavesample Volume (6,1) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $18 $01 $00 $00 val6.11 val0.5 $F7
+$encoder 40 ; Pan (6,2) 0-17
+  .showvalue on
+  .mode 1dot
+  .resolution 24 24 24 24
+  .default 0
+  .minmax 0 17
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $18 $02 $00 $00 val6.11 val0.5 $F7
+$encoder 41 ; ENV2 Time 1 (2,3) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $03 $00 $00 val6.11 val0.5 $F7
+$encoder 42 ; ENV2 Time 2 (2,19) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $13 $00 $00 val6.11 val0.5 $F7
+$encoder 43 ; ENV2 Time 3 (2,20) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $14 $00 $00 val6.11 val0.5 $F7
+$encoder 44 ; ENV2 Time 4 (2,21) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $15 $00 $00 val6.11 val0.5 $F7
+$encoder 45 ; ENV2 Time 5 (2,22) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $16 $00 $00 val6.11 val0.5 $F7
+$encoder 46 ; ENV2 2nd Release Time (2,4) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $04 $00 $00 val6.11 val0.5 $F7
+$encoder 47 ; ENV2 Attack Time Vel (2,5) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $05 $00 $00 val6.11 val0.5 $F7
+$encoder 48 ; ENV2 Kbd Scaling (2,6) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $08 $06 $00 $00 val6.11 val0.5 $F7
+$encoder 49 ; ENV3 Time 1 (3,3) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $03 $00 $00 val6.11 val0.5 $F7
+$encoder 50 ; ENV3 Time 2 (3,19) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $13 $00 $00 val6.11 val0.5 $F7
+$encoder 51 ; ENV3 Time 3 (3,20) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $14 $00 $00 val6.11 val0.5 $F7
+$encoder 52 ; ENV3 Time 4 (3,21) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $15 $00 $00 val6.11 val0.5 $F7
+$encoder 53 ; ENV3 Time 5 (3,22) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $16 $00 $00 val6.11 val0.5 $F7
+$encoder 54 ; ENV3 2nd Release Time (3,4) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $04 $00 $00 val6.11 val0.5 $F7
+$encoder 55 ; ENV3 Attack Time Vel (3,5) 0-99
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 99
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $05 $00 $00 val6.11 val0.5 $F7
+$encoder 56 ; ENV3 Kbd Scaling (3,6) 0-127
+  .showvalue on
+  .mode bar
+  .resolution 96 96 96 96
+  .default 0
+  .minmax 0 127
+  .tx $F0 $0F $03 $00 $11 $00 $00 $00 $00 $00 $00 $0C $06 $00 $00 val6.11 val0.5 $F7
+$end
