@@ -2,12 +2,47 @@
 
 *[Version française](README.fr.md)*
 
+<p align="center">
+  <a href="https://commons.wikimedia.org/wiki/File:Ensoniq_EPS_Photo.jpg"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Ensoniq_EPS_Photo.jpg" alt="Ensoniq EPS Performance Sampler" width="100%"></a><br>
+  <sub>Ensoniq EPS — photo by Johnrpenner, <a href="https://commons.wikimedia.org/wiki/File:Ensoniq_EPS_Photo.jpg">Wikimedia Commons</a>,
+  <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a></sub>
+</p>
+
 EPS Builder turns audio files into instruments for the **Ensoniq EPS** sampler, stores them on
 virtual floppy disks (`.hfe`) and manages the USB stick of a **Gotek** drive (HxC or FlashFloppy
 firmware). Instruments are written in the EPS classic format, which the EPS-16+ and the ASR-10
 can also read.
 
 The application is available in English and French (menu *Langue / Language*).
+
+![EPS Builder main window](docs/screenshot-en.png)
+
+## The Ensoniq EPS
+
+The **EPS** (*Ensoniq Performance Sampler*) is a sampling keyboard built by Ensoniq in Malvern,
+Pennsylvania, from 1988 to 1991, as the successor to the Mirage. It earned the word
+"Performance" in its name with a feature that was rare at the time: new sounds can be loaded
+from disk while you keep playing the ones already in memory.
+
+| | |
+|---|---|
+| **Sampling** | 13-bit, mono input, sample rates from 6.25 kHz to 52 kHz |
+| **Polyphony** | 20 voices at 31.2 kHz, 16 at 39 kHz, 12 at 52 kHz |
+| **Keyboard** | 61 keys, velocity and polyphonic aftertouch, two patch-select buttons |
+| **Instruments** | 8 loaded at once, each with up to 8 layers and 127 wavesamples |
+| **Per-sound synthesis** | two filters, three envelopes (pitch, filter, amplitude), LFO, assignable modulation sources |
+| **Memory** | 256 K sample words, expandable with 2x and 4x expanders |
+| **Storage** | 3.5" double-density floppy disks of 800 KB; SCSI with an expander |
+| **Also on board** | 8-track sequencer, MIDI in/out/thru |
+| **Operating system** | loaded from floppy at power-up; last version 2.49 |
+
+Its 13-bit converters give the EPS a gritty, slightly crunchy character that is still sought
+after today. It was followed by the 16-bit **EPS-16 Plus** and, in 1992, by the **ASR-10**, both
+of which read EPS disks — the original model is now often called the "EPS classic".
+
+Thirty-five years on, the weak point of these machines is the floppy drive. A **Gotek** floppy
+emulator replaces it with a USB stick holding disk images, and EPS Builder is the missing link
+between today's audio files and that stick.
 
 ## Features
 
@@ -76,3 +111,9 @@ Free software under the [MIT licence](LICENSE) — © 2026 Christophe CRUZ.
 Ensoniq, EPS and ASR-10 are trademarks of their respective owners; this project is not
 affiliated with any manufacturer. The file format was worked out from disks written by an EPS
 and from the Ensoniq *EPS External Command Specification*.
+
+The photograph of the EPS at the top of this page is by Johnrpenner (Wikimedia Commons) and is
+licensed separately under CC BY-SA 3.0; it is not covered by the MIT licence. Background on the
+instrument: [Wikipedia](https://en.wikipedia.org/wiki/Ensoniq_EPS),
+[Vintage Synth Explorer](https://www.vintagesynth.com/ensoniq/eps),
+[Sound On Sound, February 1988](https://www.muzines.co.uk/articles/ensoniq-performance-sampler/3471).

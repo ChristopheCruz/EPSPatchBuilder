@@ -2,9 +2,48 @@
 
 *[English version](README.md)*
 
-Crée des instruments Ensoniq EPS à partir de fichiers audio, les range sur des disquettes
-virtuelles (`.hfe`) et gère la clé USB d'un lecteur Gotek (firmware HxC ou FlashFloppy).
-Les instruments sont au format EPS classique, relu aussi par l'EPS-16+ et l'ASR-10.
+<p align="center">
+  <a href="https://commons.wikimedia.org/wiki/File:Ensoniq_EPS_Photo.jpg"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Ensoniq_EPS_Photo.jpg" alt="Ensoniq EPS Performance Sampler" width="100%"></a><br>
+  <sub>Ensoniq EPS — photo de Johnrpenner, <a href="https://commons.wikimedia.org/wiki/File:Ensoniq_EPS_Photo.jpg">Wikimedia Commons</a>,
+  <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr">CC BY-SA 3.0</a></sub>
+</p>
+
+EPS Builder transforme des fichiers audio en instruments pour l'échantillonneur **Ensoniq EPS**,
+les range sur des disquettes virtuelles (`.hfe`) et gère la clé USB d'un lecteur **Gotek**
+(firmware HxC ou FlashFloppy). Les instruments sont au format EPS classique, relu aussi par
+l'EPS-16+ et l'ASR-10.
+
+L'application existe en français et en anglais (menu *Langue / Language*).
+
+![Fenêtre principale d'EPS Builder](docs/screenshot-fr.png)
+
+## L'Ensoniq EPS
+
+L'**EPS** (*Ensoniq Performance Sampler*) est un clavier échantillonneur fabriqué par Ensoniq à
+Malvern, en Pennsylvanie, de 1988 à 1991, pour succéder au Mirage. Il doit le mot
+« Performance » de son nom à une fonction rare à l'époque : on peut charger de nouveaux sons
+depuis la disquette tout en continuant à jouer ceux qui sont déjà en mémoire.
+
+| | |
+|---|---|
+| **Échantillonnage** | 13 bits, entrée mono, fréquences de 6,25 kHz à 52 kHz |
+| **Polyphonie** | 20 voix à 31,2 kHz, 16 à 39 kHz, 12 à 52 kHz |
+| **Clavier** | 61 touches, vélocité et aftertouch polyphonique, deux boutons de sélection de patch |
+| **Instruments** | 8 chargés à la fois, chacun avec jusqu'à 8 layers et 127 sons |
+| **Synthèse par son** | deux filtres, trois enveloppes (hauteur, filtre, amplitude), LFO, sources de modulation assignables |
+| **Mémoire** | 256 K mots d'échantillons, extensible par des cartes 2x et 4x |
+| **Stockage** | disquettes 3,5 pouces double densité de 800 Ko ; SCSI avec une extension |
+| **Également** | séquenceur 8 pistes, MIDI in/out/thru |
+| **Système** | chargé depuis la disquette à l'allumage ; dernière version 2.49 |
+
+Ses convertisseurs 13 bits donnent à l'EPS un grain un peu rugueux, toujours recherché
+aujourd'hui. Il a été suivi par l'**EPS-16 Plus**, en 16 bits, puis en 1992 par l'**ASR-10**, qui
+relisent tous deux les disquettes de l'EPS — le modèle d'origine est souvent appelé « EPS
+classique ».
+
+Trente-cinq ans plus tard, le point faible de ces machines est le lecteur de disquettes. Un
+émulateur **Gotek** le remplace par une clé USB contenant des images de disquettes, et EPS
+Builder fait le lien entre les fichiers audio d'aujourd'hui et cette clé.
 
 ## Fabriquer l'application Windows
 
@@ -69,3 +108,9 @@ Le manuel complet est dans [`epsbuilder/MANUEL.md`](epsbuilder/MANUEL.md) et dan
 Logiciel libre sous [licence MIT](LICENSE) — © 2026 Christophe CRUZ.
 
 Ensoniq, EPS et ASR-10 sont des marques de leurs propriétaires respectifs ; ce projet n'est affilié à aucun fabricant.
+
+La photographie de l'EPS en haut de cette page est de Johnrpenner (Wikimedia Commons) ; elle est
+placée sous sa propre licence, CC BY-SA 3.0, et n'est pas couverte par la licence MIT. Pour en
+savoir plus sur l'instrument : [Wikipédia](https://en.wikipedia.org/wiki/Ensoniq_EPS),
+[Vintage Synth Explorer](https://www.vintagesynth.com/ensoniq/eps),
+[Sound On Sound, février 1988](https://www.muzines.co.uk/articles/ensoniq-performance-sampler/3471).
