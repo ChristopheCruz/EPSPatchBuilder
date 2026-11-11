@@ -15,6 +15,9 @@ l'EPS-16+ et l'ASR-10.
 
 L'application existe en français et en anglais (menu *Langue / Language*).
 
+**Téléchargement :** l'application Windows prête à l'emploi (`EPSBuilder.exe`, sans installation)
+est jointe à la [version v0.4.1](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1).
+
 ![Fenêtre principale d'EPS Builder](docs/screenshot-fr.png)
 
 ## L'Ensoniq EPS
@@ -46,6 +49,9 @@ Trente-cinq ans plus tard, le point faible de ces machines est le lecteur de dis
 Builder fait le lien entre les fichiers audio d'aujourd'hui et cette clé.
 
 ## Fabriquer l'application Windows
+
+Un `EPSBuilder.exe` déjà compilé est disponible sur la [page de la version](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1) ; ne le
+fabriquez vous-même que si vous voulez modifier le programme.
 
 Double-cliquez sur `build_windows.bat`. Le script installe les composants dans un dossier
 `.venv`, lance les tests, puis produit `dist\EPSBuilder.exe`. Il faut Python 3.10 ou plus

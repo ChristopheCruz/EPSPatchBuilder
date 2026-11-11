@@ -15,6 +15,9 @@ can also read.
 
 The application is available in English and French (menu *Langue / Language*).
 
+**Download:** the ready-to-run Windows application (`EPSBuilder.exe`, no installation needed) is
+attached to the [v0.4.1 release](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1).
+
 ![EPS Builder main window](docs/screenshot-en.png)
 
 ## The Ensoniq EPS
@@ -58,6 +61,9 @@ between today's audio files and that stick.
   read-back verification, copies instruments between slots by drag and drop, text catalogue.
 
 ## Building the Windows application
+
+A prebuilt `EPSBuilder.exe` is available on the [release page](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1); build it yourself
+only if you want to modify the program.
 
 Double-click `build_windows.bat`. The script installs the dependencies in a `.venv` folder,
 runs the tests, then produces `dist\EPSBuilder.exe`. Python 3.10 or later and an Internet
