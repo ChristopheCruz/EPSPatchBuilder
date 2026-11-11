@@ -14,7 +14,8 @@ time over MIDI System Exclusive, plus a printable A4 overlay that labels the enc
 | `EPS_BCR2000_I1_L1.bcl` | Main preset: instrument 1, layer 1, all wavesamples |
 | `EPS_BCR2000_I1_L1_7bit_variant.bcl` | Fallback preset if the BCR2000 rejects the 6-bit value split |
 | `gen_eps_bcl.py` | Generator, to target another instrument, layer, wavesample or base channel |
-| `overlay/bcr2000_overlay_a4.html` | Printable overlay, two A4 landscape sheets |
+| `overlay/bcr2000_overlay_a4.pdf` | Printable overlay, two A4 landscape sheets |
+| `overlay/bcr2000_overlay_a4.html` | Source of the overlay, to edit the labels |
 
 ## How it works
 
@@ -115,12 +116,12 @@ Known limits:
 
 ## Overlay
 
-`overlay/bcr2000_overlay_a4.html` holds two A4 landscape sheets: one piece for the push-encoder
-row and the two button rows, one piece for the three fixed encoder rows. Open it in a browser and
-print it.
+`overlay/bcr2000_overlay_a4.pdf` holds two A4 landscape sheets: one piece for the push-encoder
+row and the two button rows, one piece for the three fixed encoder rows. The PDF is printed from
+`overlay/bcr2000_overlay_a4.html`; edit that file and print it to PDF from a browser to change
+the labels.
 
-- Print at **100 %** ("actual size", no fit-to-page), with margins set to none. Each sheet has a
-  100 mm check line.
+- Print at **100 %** ("actual size", no fit-to-page). Each sheet has a 100 mm check line.
 - The dimensions (28.6 mm encoder pitch, 26 mm holes) were taken from the BCR2000 overlay
   template of the Mixxx manual, not measured on a device. Print a test on plain paper and check
   the holes against the encoders before cutting the final one.
