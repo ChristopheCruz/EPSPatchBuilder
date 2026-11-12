@@ -12,9 +12,14 @@ Wavesample number 0 addresses every wavesample of the layer.
 Usage:
     python gen_eps_bcl.py [OUTPUT_DIR] [INSTRUMENT 1-8] [LAYER 1-8] [WAVESAMPLE 0-127] [BASE_CHANNEL 1-16]
 
-Two files are written:
-    EPS_BCR2000_I<i>_L<l>.bcl             value sent as "val6.11 val0.5" (exact 6-bit split)
-    EPS_BCR2000_I<i>_L<l>_7bit_variant.bcl  value sent as "$00 val" (fallback, see README)
+Two presets are written, each as BCL text (.bcl) and as a SysEx dump (.syx):
+    EPS_BCR2000_I<i>_L<l>               value sent as "val6.11 val0.5" (exact 6-bit split)
+    EPS_BCR2000_I<i>_L<l>_7bit_variant  value sent as "$00 val" (fallback, see README)
+
+The .syx file holds the same BCL, one line per SysEx message, in the form the BCR2000
+accepts from any MIDI dump program:
+    F0 00 20 32 7F 15 20 <line index MSB> <line index LSB> <BCL line as ASCII> F7
+(7F = any device ID, 15 = BCR2000, 20 = BCL message).
 """
 import os
 import sys
@@ -108,6 +113,22 @@ def build(variant, base_channel, instrument, layer, wavesample):
     return lines
 
 
+def to_sysex(lines):
+    """Wrap BCL lines as BCR2000 SysEx messages, comments and blank lines removed."""
+    data = bytearray()
+    index = 0
+    for line in lines:
+        text = line.split(";")[0].rstrip()
+        if not text.strip():
+            continue
+        payload = text.encode("ascii")
+        assert all(byte < 0x80 for byte in payload)
+        data += bytes([0xF0, 0x00, 0x20, 0x32, 0x7F, 0x15, 0x20, (index >> 7) & 0x7F, index & 0x7F])
+        data += payload + b"\xF7"
+        index += 1
+    return bytes(data)
+
+
 def self_check(base_channel, instrument, layer, wavesample):
     """Simulate the 6-bit output and decode it back the way the specification describes."""
     # Specification example: "Free System Blocks" (page 13, item 0) is sent as $34 $00.
@@ -144,9 +165,14 @@ def main():
     if wavesample:
         base += f"_WS{wavesample}"
     for variant, suffix in (("6bit", ""), ("7bit", "_7bit_variant")):
+        lines = build(variant, base_channel, instrument, layer, wavesample)
         path = os.path.join(out_dir, base + suffix + ".bcl")
         with open(path, "w", newline="\r\n") as handle:
-            handle.write("\n".join(build(variant, base_channel, instrument, layer, wavesample)) + "\n")
+            handle.write("\n".join(lines) + "\n")
+        print("wrote", path)
+        path = os.path.join(out_dir, base + suffix + ".syx")
+        with open(path, "wb") as handle:
+            handle.write(to_sysex(lines))
         print("wrote", path)
 
 

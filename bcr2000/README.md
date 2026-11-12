@@ -11,8 +11,9 @@ time over MIDI System Exclusive, plus a printable A4 overlay that labels the enc
 
 | File | Purpose |
 |---|---|
-| `EPS_BCR2000_I1_L1.bcl` | Main preset: instrument 1, layer 1, all wavesamples |
-| `EPS_BCR2000_I1_L1_7bit_variant.bcl` | Fallback preset if the BCR2000 rejects the 6-bit value split |
+| `EPS_BCR2000_I1_L1.bcl` | Main preset as BCL text: instrument 1, layer 1, all wavesamples |
+| `EPS_BCR2000_I1_L1.syx` | The same preset as a SysEx dump, to send without an editor |
+| `EPS_BCR2000_I1_L1_7bit_variant.bcl` / `.syx` | Fallback preset if the BCR2000 rejects the 6-bit value split |
 | `gen_eps_bcl.py` | Generator, to target another instrument, layer, wavesample or base channel |
 | `overlay/bcr2000_overlay_a4.pdf` | Printable overlay, two A4 landscape sheets |
 | `overlay/bcr2000_overlay_a4.html` | Source of the overlay, to edit the labels |
@@ -82,8 +83,13 @@ and the layer parameters (glide, velocity window).
 
 1. On the EPS: Edit / MIDI, set **MIDI SYS-EX = ON** and base channel 1.
 2. Load an instrument into instrument slot 1.
-3. Open the `.bcl` file in [BC Manager](https://mountainutilities.eu) and send it to the
-   BCR2000. It lands in the edit buffer without overwriting a memory slot; press STORE on the
+3. Send the preset to the BCR2000, either way:
+   - open the `.bcl` file in [BC Manager](https://mountainutilities.eu) and send it from there
+     (BC Manager also reports any line the BCR2000 rejects), or
+   - send the `.syx` file with any MIDI dump program such as MIDI-OX or SysEx Librarian. If the
+     transfer fails, add a short delay between SysEx messages in that program.
+
+   The preset lands in the edit buffer without overwriting a memory slot; press STORE on the
    BCR2000 to keep it.
 4. Connect BCR2000 MIDI OUT to EPS MIDI IN.
 5. Start with Filter 1 Cutoff while holding a note.
@@ -95,12 +101,17 @@ python gen_eps_bcl.py OUTPUT_DIR INSTRUMENT LAYER WAVESAMPLE BASE_CHANNEL
 python gen_eps_bcl.py . 2 1 0 1      # instrument 2, layer 1, all wavesamples, base channel 1
 ```
 
+The generator writes both the `.bcl` and the `.syx` of each preset. A `.syx` file is the BCL text
+with one line per SysEx message (`F0 00 20 32 7F 15 20 <index MSB> <index LSB> <line> F7`),
+comments removed.
+
 ## What still needs checking
 
 - **BCL value syntax.** The EPS wants the value as two 6-bit bytes, written here as
   `val6.11 val0.5`. It is not confirmed that the BCR2000 accepts this bit range. If BC Manager
-  rejects the main file, use the `7bit_variant` file: it sends `$00 val`, which is exact for
-  values 0 to 63 and unverified above that.
+  rejects the main file, or the encoders send nothing after loading the main `.syx`, use the
+  `7bit_variant` files: they send `$00 val`, which is exact for values 0 to 63 and unverified
+  above that.
 - **Message rate.** With a one-way cable, the specification asks the sender to wait 2 seconds
   between commands. That is probably conservative, but turn the encoders slowly at first and see
   whether the EPS keeps up.
