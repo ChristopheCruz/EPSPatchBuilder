@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a Behringer BCR2000 preset (BCL text) that edits Ensoniq EPS parameters over SysEx.
+"""Generate a Behringer BCR2000 preset that edits Ensoniq EPS (classic) parameters over SysEx.
 
 Every encoder sends one PUT PARAMETER command (11h), as described in the
 "Ensoniq Performance Sampler External Command Specification" (June 12, 1989):
@@ -7,22 +7,32 @@ Every encoder sends one PUT PARAMETER command (11h), as described in the
     F0 0F 03 0n 11 | instrument | layer | wavesample | parameter | value (2 words) | F7
 
 Each field is a 12-bit word sent as two 6-bit bytes, high byte first.
-Wavesample number 0 addresses every wavesample of the layer.
+
+What was learned on a real EPS and BCR2000 (see DEBUG_REPORT.md) and is built in here:
+
+* Value range 0-63 only. The EPS needs values 64-127 as two 6-bit bytes, and BCL has no token
+  that splits a value that way (its tokens are val, val0, val0.3, val4.7, val8.11, val12.13,
+  val7.13, val1.7). A value sent as one 7-bit byte is ignored by the EPS, so every encoder is
+  capped at 63 and sends "$00 val".
+* One wavesample, not "all". Writes to wavesample 0 (all wavesamples of the layer) were
+  applied, refused or ignored depending on the state of the EPS front panel. Writes to a
+  numbered wavesample worked every time. The default target is wavesample 1.
+* Slow output. The BCR2000 default transmission interval is 2 ms, which floods the EPS
+  (ERROR 144). The preset sets the global interval to 100 ms, the maximum.
 
 Usage:
     python gen_eps_bcl.py [OUTPUT_DIR] [INSTRUMENT 1-8] [LAYER 1-8] [WAVESAMPLE 0-127] [BASE_CHANNEL 1-16]
 
-Two presets are written, each as BCL text (.bcl) and as a SysEx dump (.syx):
-    EPS_BCR2000_I<i>_L<l>               value sent as "val6.11 val0.5" (exact 6-bit split)
-    EPS_BCR2000_I<i>_L<l>_7bit_variant  value sent as "$00 val" (fallback, see README)
-
-The .syx file holds the same BCL, one line per SysEx message, in the form the BCR2000
-accepts from any MIDI dump program:
+Writes EPS_BCR2000_I<i>_L<l>_WS<w>.bcl (BCL text) and .syx (the same BCL, one line per SysEx
+message, for any MIDI dump program):
     F0 00 20 32 7F 15 20 <line index MSB> <line index LSB> <BCL line as ASCII> F7
 (7F = any device ID, 15 = BCR2000, 20 = BCL message).
 """
 import os
 import sys
+
+VALUE_CAP = 63        # highest value the BCR2000 can send in a form the EPS accepts
+TX_INTERVAL_MS = 100  # BCR2000 global transmission interval: 2, 5, 10, 20, 50 or 100
 
 # (name, page, item, max value, bipolar in the specification?)
 # The parameter number is page * 256 + item (section 9 of the specification).
@@ -65,6 +75,7 @@ PARAMS = {
 }
 
 
+
 def word12(value):
     """A 12-bit word as two 6-bit MIDI bytes, high byte first."""
     assert 0 <= value < 4096
@@ -78,16 +89,23 @@ def header(base_channel, instrument, layer, wavesample, page, item):
             + word12(page * 256 + item))
 
 
-def build(variant, base_channel, instrument, layer, wavesample):
-    tail = "val6.11 val0.5" if variant == "6bit" else "$00 val"
-    target = "all wavesamples" if wavesample == 0 else f"wavesample {wavesample}"
+def preset_name(instrument, layer, wavesample):
+    target = "ALL" if wavesample == 0 else f"WS{wavesample}"
+    return f"EPS I{instrument} L{layer} {target} 0-{VALUE_CAP}"
+
+
+def build(base_channel, instrument, layer, wavesample):
+    target = "all wavesamples (unreliable)" if wavesample == 0 else f"wavesample {wavesample}"
     lines = [
-        f"; Ensoniq EPS (classic) - BCR2000 preset, SysEx PUT PARAMETER - {variant} value format",
+        "; Ensoniq EPS (classic) - BCR2000 preset, SysEx PUT PARAMETER",
         f"; Target: instrument {instrument}, layer {layer}, {target}. EPS base channel = {base_channel}.",
-        "; No $store: the preset lands in the BCR2000 edit buffer.",
+        f"; Values 0-{VALUE_CAP} only. Global transmission interval set to {TX_INTERVAL_MS} ms.",
+        "; No $store: the preset lands in the BCR2000 edit buffer. Press STORE to keep it.",
         "$rev R1",
+        "$global",
+        f"  .txinterval {TX_INTERVAL_MS}",
         "$preset",
-        "  .name '%-24s'" % f"EPS I{instrument} L{layer} {'ALL' if wavesample == 0 else 'WS%d' % wavesample}",
+        "  .name '%-24s'" % preset_name(instrument, layer, wavesample),
         "  .snapshot off",
         "  .request off",
         "  .egroups 4",
@@ -97,17 +115,23 @@ def build(variant, base_channel, instrument, layer, wavesample):
     ]
     for number in range(1, 57):
         name, page, item, maximum, bipolar = PARAMS[number]
-        resolution = 96 if maximum >= 99 else (24 if maximum >= 13 else 12)
+        top = min(maximum, VALUE_CAP)
+        resolution = 48 if maximum >= 99 else (24 if maximum >= 13 else 12)
         head = " ".join(f"${b:02X}" for b in header(base_channel, instrument, layer, wavesample, page, item))
-        note = " [positive half only]" if bipolar else ""
+        notes = []
+        if maximum > VALUE_CAP:
+            notes.append(f"EPS range 0-{maximum}")
+        if bipolar:
+            notes.append("bipolar on the EPS, positive side only")
+        note = f" [{'; '.join(notes)}]" if notes else ""
         lines += [
-            f"$encoder {number} ; {name} ({page},{item}) 0-{maximum}{note}",
+            f"$encoder {number} ; {name} ({page},{item}) 0-{top}{note}",
             "  .showvalue on",
             f"  .mode {'bar' if maximum >= 99 else '1dot'}",
             f"  .resolution {resolution} {resolution} {resolution} {resolution}",
             "  .default 0",
-            f"  .minmax 0 {maximum}",
-            f"  .tx {head} $00 $00 {tail} $F7",
+            f"  .minmax 0 {top}",
+            f"  .tx {head} $00 $00 $00 val $F7",
         ]
     lines.append("$end")
     return lines
@@ -130,17 +154,14 @@ def to_sysex(lines):
 
 
 def self_check(base_channel, instrument, layer, wavesample):
-    """Simulate the 6-bit output and decode it back the way the specification describes."""
+    """Simulate every encoder's output and decode it back the way the specification describes."""
     # Specification example: "Free System Blocks" (page 13, item 0) is sent as $34 $00.
     assert word12(13 * 256 + 0) == [0x34, 0x00]
     assert sorted(PARAMS) == list(range(1, 57))
     assert len({(p[1], p[2]) for p in PARAMS.values()}) == 56, "duplicate parameter"
     for name, page, item, maximum, _ in PARAMS.values():
-        for value in {0, 1, 63, 64, maximum}:
-            if value > maximum:
-                continue
-            message = (header(base_channel, instrument, layer, wavesample, page, item)
-                       + [0, 0, (value >> 6) & 63, value & 63, 0xF7])
+        for value in {0, 1, min(maximum, VALUE_CAP)}:
+            message = header(base_channel, instrument, layer, wavesample, page, item) + [0, 0, 0, value, 0xF7]
             assert len(message) == 18 and all(b < 64 for b in message[5:-1]), name
             data = message[5:-1]
             words = [data[i] * 64 + data[i + 1] for i in range(0, len(data), 2)]
@@ -154,26 +175,23 @@ def main():
     out_dir = args[0] if len(args) > 0 else "."
     instrument = int(args[1]) if len(args) > 1 else 1
     layer = int(args[2]) if len(args) > 2 else 1
-    wavesample = int(args[3]) if len(args) > 3 else 0
+    wavesample = int(args[3]) if len(args) > 3 else 1
     base_channel = int(args[4]) if len(args) > 4 else 1
     if not (1 <= instrument <= 8 and 1 <= layer <= 8 and 0 <= wavesample <= 127 and 1 <= base_channel <= 16):
-        sys.exit("instrument 1-8, layer 1-8, wavesample 0-127 (0 = all), base channel 1-16")
+        sys.exit("instrument 1-8, layer 1-8, wavesample 0-127 (0 = all, unreliable), base channel 1-16")
 
     self_check(base_channel, instrument, layer, wavesample)
     os.makedirs(out_dir, exist_ok=True)
-    base = f"EPS_BCR2000_I{instrument}_L{layer}"
-    if wavesample:
-        base += f"_WS{wavesample}"
-    for variant, suffix in (("6bit", ""), ("7bit", "_7bit_variant")):
-        lines = build(variant, base_channel, instrument, layer, wavesample)
-        path = os.path.join(out_dir, base + suffix + ".bcl")
-        with open(path, "w", newline="\r\n") as handle:
-            handle.write("\n".join(lines) + "\n")
-        print("wrote", path)
-        path = os.path.join(out_dir, base + suffix + ".syx")
-        with open(path, "wb") as handle:
-            handle.write(to_sysex(lines))
-        print("wrote", path)
+    lines = build(base_channel, instrument, layer, wavesample)
+    base = f"EPS_BCR2000_I{instrument}_L{layer}_" + ("ALL" if wavesample == 0 else f"WS{wavesample}")
+    path = os.path.join(out_dir, base + ".bcl")
+    with open(path, "w", newline="\r\n") as handle:
+        handle.write("\n".join(lines) + "\n")
+    print("wrote", path)
+    path = os.path.join(out_dir, base + ".syx")
+    with open(path, "wb") as handle:
+        handle.write(to_sysex(lines))
+    print("wrote", path)
 
 
 if __name__ == "__main__":

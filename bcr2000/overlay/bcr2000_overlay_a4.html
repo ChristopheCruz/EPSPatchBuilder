@@ -23,7 +23,7 @@ html, body { margin: 0; background: #d9d9d6; }
 
 <div style="width: 912px; display: flex; flex-direction: column; gap: 6px">
 <h1 style="margin: 0; font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 700; font-size: 30px; line-height: 1.1">BCR2000 overlay · Ensoniq EPS</h1>
-<div style="font-size: 15px; line-height: 1.4; color: #3d3d3a">Sheet 1 of 2 · top row: push encoders (4 groups) and the two button rows. Preset "EPS I1 L1 ALL".</div>
+<div style="font-size: 15px; line-height: 1.4; color: #3d3d3a">Sheet 1 of 2 · top row: push encoders (4 groups) and the two button rows. Preset "EPS I1 L1 WS1 0-63".</div>
 </div>
 
 <div style="position: relative; width: 912px; height: 300px; box-sizing: border-box; background: #f4f3ef; outline: 1px solid #141413; font-family: 'Barlow Semi Condensed', sans-serif; font-weight: 600; font-size: 13px; line-height: 1; text-align: center">
@@ -67,7 +67,7 @@ html, body { margin: 0; background: #d9d9d6; }
 <div style="display: flex; align-items: center; gap: 10px"><div style="width: 34px; height: 20px; background: #d3ebcd; outline: 1px solid #141413; text-align: center; font-weight: 600; line-height: 20px">3</div><div>Group 3 · ENV2 (filter), "Hard" levels</div></div>
 <div style="display: flex; align-items: center; gap: 10px"><div style="width: 34px; height: 20px; background: #e6d3ee; outline: 1px solid #141413; text-align: center; font-weight: 600; line-height: 20px">4</div><div>Group 4 · ENV3 (amp), "Hard" levels</div></div>
 </div>
-<div style="font-size: 13px; line-height: 1.4; color: #3d3d3a">The active group is selected with the four ENCODER GROUPS keys of the BCR2000. The + sign marks a bipolar parameter for which the preset only sends the positive half (0 to +127).</div>
+<div style="font-size: 13px; line-height: 1.4; color: #3d3d3a">The active group is selected with the four ENCODER GROUPS keys of the BCR2000. The + sign marks a bipolar parameter for which the preset only sends positive values (0 to +63).</div>
 </div>
 
 <div style="display: flex; flex-direction: column; gap: 12px">
@@ -98,36 +98,36 @@ html, body { margin: 0; background: #d9d9d6; }
 <div style="position: absolute; left: 0; top: 358px; width: 912px; height: 212px; background: #e6d3ee"></div>
 
 <div style="position: absolute; left: 0; top: 122px; width: 912px; height: 38px; box-sizing: border-box; padding-left: 8px; display: grid; grid-template-columns: repeat(8, 108px) 40px; align-items: center; font-weight: 600; font-size: 14px; line-height: 1.2">
-<div>F1 Cutoff<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
-<div>F2 Cutoff<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
-<div>F1 Env2 Amt +<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
-<div>F2 Env2 Amt +<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
-<div>F1 Kbd Amt +<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
-<div>F1 Mod Amt +<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
-<div>WS Volume<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
+<div>F1 Cutoff<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>F2 Cutoff<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>F1 Env2 Amt +<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>F2 Env2 Amt +<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>F1 Kbd Amt +<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>F1 Mod Amt +<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>WS Volume<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
 <div>Pan<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–17</div></div>
 </div>
 
 <div style="position: absolute; left: 0; top: 315px; width: 912px; height: 38px; box-sizing: border-box; padding-left: 8px; display: grid; grid-template-columns: repeat(8, 108px) 40px; align-items: center; font-weight: 600; font-size: 14px; line-height: 1.2">
-<div>Time 1<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Time 2<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Time 3<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Time 4<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Time 5<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>2nd Rel Time<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
-<div>Attack Vel<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Kbd Scaling<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
+<div>Time 1<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Time 2<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Time 3<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Time 4<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Time 5<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>2nd Rel Time<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Attack Vel<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Kbd Scaling<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
 </div>
 
 <div style="position: absolute; left: 0; top: 508px; width: 912px; height: 38px; box-sizing: border-box; padding-left: 8px; display: grid; grid-template-columns: repeat(8, 108px) 40px; align-items: center; font-weight: 600; font-size: 14px; line-height: 1.2">
-<div>Time 1<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Time 2<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Time 3<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Time 4<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Time 5<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>2nd Rel Time<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
-<div>Attack Vel<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–99</div></div>
-<div>Kbd Scaling<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–127</div></div>
+<div>Time 1<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Time 2<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Time 3<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Time 4<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Time 5<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>2nd Rel Time<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Attack Vel<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
+<div>Kbd Scaling<div style="font-family: 'Barlow', sans-serif; font-weight: 400; font-size: 12px">0–63</div></div>
 </div>
 
 <div style="position: absolute; left: 872px; top: 0; width: 40px; height: 165px; display: flex; align-items: center; justify-content: center"><div style="writing-mode: vertical-rl; font-weight: 700; font-size: 13px; letter-spacing: 0.04em">FILTER · AMP</div></div>
@@ -148,7 +148,7 @@ html, body { margin: 0; background: #d9d9d6; }
 <div style="width: 378px; height: 10px; box-sizing: border-box; border-left: 2px solid #141413; border-right: 2px solid #141413; border-bottom: 2px solid #141413"></div>
 <div style="font-size: 13px; font-weight: 500">This line must measure 100 mm</div>
 </div>
-<div style="max-width: 470px; font-size: 13px; line-height: 1.4; color: #3d3d3a">Print at 100 %. Cut along the solid outline and cut out the 24 dashed circles. The + sign marks a parameter for which only the positive half is sent.</div>
+<div style="max-width: 470px; font-size: 13px; line-height: 1.4; color: #3d3d3a">Print at 100 %. Cut along the solid outline and cut out the 24 dashed circles. The + sign marks a bipolar parameter: only positive values are sent.</div>
 </div>
 
 </div>
