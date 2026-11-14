@@ -1,4 +1,4 @@
-# EPS Builder
+# EPS Patch Builder
 
 *[English version](README.md)*
 
