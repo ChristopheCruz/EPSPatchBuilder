@@ -16,9 +16,23 @@ l'EPS-16+ et l'ASR-10.
 L'application existe en français et en anglais (menu *Langue / Language*).
 
 **Téléchargement :** l'application Windows prête à l'emploi (`EPSBuilder.exe`, sans installation)
-est jointe à la [version v0.4.1](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1).
+est jointe à la [version v0.5.0](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.5.0).
 
 ![Fenêtre principale d'EPS Builder](docs/screenshot-fr.png)
+
+## Nouveautés de la version 0.5.0
+
+- **Instruments à plusieurs layers** ([#3](https://github.com/ChristopheCruz/EPSPatchBuilder/issues/3)) :
+  création, chargement, modification et enregistrement d'instruments jusqu'à 8 layers, chacun
+  avec ses sons, ses plages de clavier, sa plage de vélocité et ses patches (boutons Patch
+  Select). Les instruments d'usine sont réécrits fidèlement : les sons qui partagent leurs
+  échantillons (les « copies » de l'EPS) restent partagés, et tous les réglages qu'EPS Builder ne
+  modifie pas sont conservés tels quels.
+- **Gestion des emplacements du Gotek** ([#4](https://github.com/ChristopheCruz/EPSPatchBuilder/issues/4)) :
+  déplacer les emplacements (monter, descendre, changer de numéro, glisser un emplacement sur un
+  autre pour les échanger), ajouter un emplacement avec une disquette vierge ou à partir d'une
+  image, renuméroter sans trous, renommer (FlashFloppy), et supprimer un emplacement dans une
+  corbeille sur la clé (`CORBEILLE_EPS`), d'où il peut être récupéré.
 
 ## L'Ensoniq EPS
 
@@ -87,7 +101,7 @@ la propriété de leurs auteurs.
 
 ## Fabriquer l'application Windows
 
-Un `EPSBuilder.exe` déjà compilé est disponible sur la [page de la version](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1) ; ne le
+Un `EPSBuilder.exe` déjà compilé est disponible sur la [page de la version](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.5.0) ; ne le
 fabriquez vous-même que si vous voulez modifier le programme.
 
 Double-cliquez sur `build_windows.bat`. Le script installe les composants dans un dossier
@@ -110,16 +124,24 @@ Pour lancer sans compiler : `pip install -r requirements.txt` puis `python -m ep
      s'applique alors à tous les sons sélectionnés (même transposition pour tous).
    - **Réglage d'un son** : forme d'onde avec repères de début, de fin et de boucle, fondus,
      fréquence et résolution par son, compression, calage sur les passages par zéro.
+   - **Layers** : jusqu'à 8 par instrument (« + Layer », « Dupliquer »), chacun avec ses sons et
+     ses plages, une plage de vélocité et les patches (boutons Patch Select) dans lesquels il joue.
 2. **Disquette** : « Ajouter l'instrument à la disquette ». Une disquette contient 1585 blocs
    (environ 790 Ko). « Avec OS… » crée une disquette qui peut démarrer l'EPS.
-   - **Modifier un instrument** : double-clic sur l'instrument (un seul layer). Ses sons gardent
-     leurs réglages ; on peut changer notes, plages et boucles, retirer ou ajouter des sons.
+   - **Modifier un instrument** : double-clic sur l'instrument, y compris s'il a plusieurs
+     layers. Ses sons gardent leurs réglages ; on peut changer notes, plages et boucles, retirer
+     ou ajouter des sons et des layers.
    - **Ordre** : boutons Monter / Descendre, ou glisser-déposer dans la liste.
 3. **Clé USB** : choisissez la clé du Gotek, puis « Écrire dans un nouvel emplacement ».
    L'écriture est relue pour contrôle. Éjectez la clé avant de la retirer.
    - Glissez un instrument de la disquette sur un emplacement pour l'y copier (sous les lignes :
      nouvel emplacement).
    - Glissez un emplacement sur la disquette pour en importer les instruments.
+   - **Gérer les emplacements** : « Monter » / « Descendre » échangent un emplacement avec son
+     voisin, « Numéro… » lui donne un autre numéro (glisser un emplacement sur un autre les
+     échange aussi). « Gérer… » ajoute un emplacement (disquette vierge ou image `.hfe`/`.img`),
+     renumérote sans trous et ouvre la corbeille. « Supprimer » déplace l'image dans le dossier
+     `CORBEILLE_EPS` de la clé : rien n'est effacé.
 
 Sur l'EPS : démarrez sur l'emplacement qui contient l'OS, puis sélectionnez sur le Gotek
 l'emplacement voulu et chargez l'instrument.
@@ -138,13 +160,26 @@ Le manuel complet est dans [`epsbuilder/MANUEL.md`](epsbuilder/MANUEL.md) et dan
 |---|---|
 | `epsbuilder/gui.py` | interface graphique (PySide6) |
 | `epsbuilder/soundedit.py` | éditeur de son : forme d'onde, découpe, boucle |
-| `epsbuilder/usbkey.py` | clé USB : emplacements, écriture contrôlée, catalogue |
+| `epsbuilder/usbkey.py` | clé USB : emplacements (déplacement, renommage, ajout, corbeille), écriture contrôlée, catalogue |
 | `epsbuilder/project.py` | enchaînement WAV → instrument → disquette |
-| `epsbuilder/instrument.py` | format instrument EPS (layers, sons, zones, boucles, enveloppe) |
+| `epsbuilder/instrument.py` | format instrument EPS (layers, patches, sons et échantillons partagés, zones, boucles, enveloppe) |
 | `epsbuilder/disk.py` | système de fichiers Ensoniq (répertoire, table d'allocation) |
 | `epsbuilder/hfe.py` | lecture et écriture HFE (MFM) |
 | `epsbuilder/audio.py` | lecture WAV, mono, rééchantillonnage, niveau |
 | `tests/test_epsbuilder.py` | tests automatiques |
+
+## État et limites
+
+- Testé sur un véritable EPS classique (OS 2.49) avec un Gotek au firmware HxC.
+- Format EPS classique uniquement (13 bits, disquettes de 800 Ko). Les formats propres à
+  l'EPS-16+ et à l'ASR-10 ne sont pas écrits, et le nommage FlashFloppy n'a pas été testé sur le
+  matériel.
+- Les instruments répartis sur deux disquettes (très gros instruments d'usine) ne peuvent pas
+  être ouverts.
+- Enveloppes détaillées, filtre, LFO et autres réglages des layers se règlent sur l'EPS ; EPS
+  Builder les conserve quand il réécrit un instrument.
+- Les instruments à plusieurs layers créés de toutes pièces ont été vérifiés sur des disquettes
+  d'usine, mais pas encore sur le matériel.
 
 ## Soutenir le projet
 

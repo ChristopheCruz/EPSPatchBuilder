@@ -72,6 +72,33 @@ importé au niveau maximal.
 - **Enveloppe** : « Son tenu » garde le volume tant que la touche est enfoncée ; « Son
   percussif » le laisse décroître jusqu'au silence, comme un piano.
 
+### Layers
+
+Un instrument EPS contient de 1 à 8 **layers**. Chaque layer a ses propres sons et ses propres
+plages de clavier ; quand on joue une note, tous les layers actifs sonnent ensemble. On s'en sert
+pour superposer deux sons (une attaque et une nappe), ou pour changer de son selon la force de
+frappe.
+
+Les onglets au-dessus de la liste des sons choisissent le layer affiché ; la liste, le clavier et
+l'éditeur de son ne montrent que ce layer.
+
+| Réglage | Effet |
+|---|---|
+| **+ Layer** | Ajoute un layer vide. Ajoutez-y des sons comme d'habitude. |
+| **Dupliquer** | Ajoute une copie du layer affiché, avec ses sons. |
+| **Supprimer le layer** | Retire le layer affiché et ses sons de l'éditeur (la disquette n'est modifiée qu'à l'écriture de l'instrument). |
+| **Nom du layer** | 12 caractères au plus. |
+| **Vélocité** | Le layer ne joue que si la touche est frappée avec une vélocité dans cette plage. 0 à 127 : toujours. Exemple : un layer « doux » de 0 à 80 et un layer « fort » de 81 à 127. |
+| **Patches 0 à 3** | Les deux boutons Patch Select de l'EPS choisissent un des quatre patches (0 : aucun bouton, 3 : les deux). Le layer joue dans les patches cochés. |
+
+Un instrument contient au plus 127 sons, tous layers confondus. Un layer vide empêche d'écrire
+l'instrument : ajoutez-y des sons ou supprimez-le.
+
+Les instruments d'usine utilisent souvent des **copies** : plusieurs sons qui relisent les mêmes
+échantillons avec d'autres réglages. EPS Builder les garde telles quelles, ce qui évite de
+multiplier la place occupée. Un son que vous retravaillez (début, fin, fréquence, compression…)
+reçoit ses propres échantillons ; changer seulement sa boucle, sa note ou sa plage ne coûte rien.
+
 ### Écouter
 
 - « Écouter » joue le son sélectionné tel qu'il sera dans l'EPS, à sa note de base.
@@ -89,7 +116,7 @@ indique la place utilisée.
 | **Vierge** | Nouvelle disquette vide. |
 | **Avec OS…** | Nouvelle disquette contenant le système de l'EPS, copié depuis une disquette existante. Elle pourra démarrer la machine. |
 | **Ouvrir… / Enregistrer sous…** | Lit ou écrit une image `.hfe` (Gotek) ou `.img` (image brute). |
-| **Modifier l'instrument** | Charge l'instrument dans l'éditeur (double-clic). Ses sons gardent leurs réglages ; modifiez-le puis cliquez sur « Mettre à jour l'instrument sur la disquette ». Seuls les instruments à un layer sont modifiables. |
+| **Modifier l'instrument** | Charge l'instrument dans l'éditeur (double-clic), avec tous ses layers. Ses sons gardent leurs réglages ; modifiez-le puis cliquez sur « Mettre à jour l'instrument sur la disquette ». Les réglages qu'EPS Builder ne montre pas (filtres, enveloppes, LFO…) sont conservés. |
 | **Écouter** | Fait entendre les sons de l'instrument l'un après l'autre. |
 | **Monter / Descendre** | Change l'ordre des instruments. On peut aussi les faire glisser dans la liste. L'OS reste en tête. |
 | **Exporter en WAV…** | Enregistre tous les sons de la disquette en fichiers WAV. |
@@ -129,6 +156,24 @@ retirer.
 Ouvrez-le, faites vos changements (ajout, suppression, ordre, modification d'un instrument),
 puis cliquez sur « Remplacer l'emplacement ».
 
+### Gérer les emplacements
+
+| Action | Effet |
+|---|---|
+| **▲ Monter / ▼ Descendre** | Mode HxC : échange l'emplacement avec le précédent ou le suivant (numéro − 1 ou + 1). |
+| **Numéro…** | Mode HxC : donne un autre numéro à l'emplacement. S'il est déjà pris, les deux emplacements échangent leurs numéros. |
+| **Renommer…** | Mode FlashFloppy : change le nom du fichier image. |
+| **Glisser un emplacement sur un autre** | Mode HxC : les deux emplacements échangent leurs numéros. |
+| **Supprimer** (ou touche Suppr) | Déplace l'image dans le dossier `CORBEILLE_EPS` de la clé, après confirmation. Rien n'est effacé : pour la récupérer, utilisez « Gérer… → Nouvel emplacement depuis une image » et choisissez-la dans ce dossier. |
+| **Gérer… → Nouvel emplacement avec une disquette vierge** | Écrit une disquette vide dans le premier emplacement libre. |
+| **Gérer… → Nouvel emplacement depuis une image** | Copie une image `.hfe` ou `.img` de l'ordinateur dans le premier emplacement libre (elle est vérifiée avant l'écriture). |
+| **Gérer… → Renuméroter sans trous** | Mode HxC : renumérote les emplacements 000, 001, 002… dans leur ordre actuel. |
+| **Gérer… → Ouvrir la corbeille** | Ouvre le dossier `CORBEILLE_EPS` de la clé. |
+
+Si la disquette ouverte vient d'un emplacement qui change de numéro, EPS Builder suit le
+changement. Les numéros changent aussi sur le Gotek : pensez-y si vous avez noté où se trouve
+l'OS.
+
 ## Sur l'EPS
 
 1. Mettez le Gotek sur l'emplacement qui contient l'OS (000 en général) et allumez l'EPS.
@@ -150,8 +195,10 @@ puis cliquez sur « Remplacer l'emplacement ».
 
 - Format EPS classique seulement (13 bits, disquettes de 800 Ko). Les formats propres à
   l'EPS-16+ et à l'ASR-10 ne sont pas écrits.
-- Un seul layer par instrument créé.
-- Les enveloppes détaillées, le filtre et le LFO se règlent sur l'EPS lui-même.
+- Les instruments répartis sur deux disquettes (très gros instruments d'usine) ne peuvent pas
+  être ouverts.
+- Les enveloppes détaillées, le filtre, le LFO et les autres réglages des layers se règlent sur
+  l'EPS lui-même ; EPS Builder les conserve.
 
 ## Licence
 

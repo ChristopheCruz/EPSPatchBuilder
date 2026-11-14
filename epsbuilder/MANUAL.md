@@ -71,6 +71,32 @@ not set their start and end by hand. "Normalize level" brings each imported soun
 - **Envelope**: "Sustained sound" keeps the volume for as long as the key is held;
   "Percussive sound" lets it decay to silence, like a piano.
 
+### Layers
+
+An EPS instrument holds 1 to 8 **layers**. Each layer has its own sounds and key ranges; when
+you play a note, all active layers sound together. Use them to stack two sounds (an attack and a
+pad), or to change sound with playing strength.
+
+The tabs above the sound list choose the layer shown; the list, the keyboard and the sound
+editor only show that layer.
+
+| Setting | Effect |
+|---|---|
+| **+ Layer** | Adds an empty layer. Add sounds to it as usual. |
+| **Duplicate** | Adds a copy of the layer shown, with its sounds. |
+| **Delete layer** | Removes the layer shown and its sounds from the editor (the disk only changes when the instrument is written). |
+| **Layer name** | 12 characters at most. |
+| **Velocity** | The layer only plays when the key is struck with a velocity in this range. 0 to 127: always. Example: a "soft" layer from 0 to 80 and a "hard" layer from 81 to 127. |
+| **Patches 0 to 3** | The two Patch Select buttons of the EPS choose one of four patches (0: no button, 3: both). The layer plays in the checked patches. |
+
+An instrument holds at most 127 sounds across all layers. An empty layer prevents writing the
+instrument: add sounds to it or delete it.
+
+Factory instruments often use **copies**: several sounds that read the same samples with other
+settings. EPS Builder keeps them as they are, so the space used does not grow. A sound you rework
+(start, end, sample rate, compression…) gets its own samples; changing only its loop, root note
+or range costs nothing.
+
 ### Listening
 
 - "Listen" plays the selected sound as it will be in the EPS, at its root note.
@@ -88,7 +114,7 @@ used.
 | **Blank** | New empty disk. |
 | **With OS…** | New disk containing the EPS operating system, copied from an existing disk. It will be able to boot the machine. |
 | **Open… / Save as…** | Reads or writes a `.hfe` image (Gotek) or a `.img` raw image. |
-| **Edit the instrument** | Loads the instrument into the editor (double-click). Its sounds keep their settings; edit it, then click "Update the instrument on the disk". Only single-layer instruments can be edited. |
+| **Edit the instrument** | Loads the instrument into the editor (double-click), with all its layers. Its sounds keep their settings; edit it, then click "Update the instrument on the disk". Settings EPS Builder does not show (filters, envelopes, LFO…) are kept. |
 | **Listen** | Plays the sounds of the instrument one after the other. |
 | **Up / Down** | Changes the order of the instruments. You can also drag them in the list. The OS stays first. |
 | **Export as WAV…** | Saves every sound on the disk as a WAV file. |
@@ -126,6 +152,23 @@ it.
 Open it, make your changes (add, delete, reorder, edit an instrument), then click "Replace the
 slot".
 
+### Managing slots
+
+| Action | Effect |
+|---|---|
+| **▲ Up / ▼ Down** | HxC mode: swaps the slot with the previous or next one (number − 1 or + 1). |
+| **Number…** | HxC mode: gives the slot another number. If it is already taken, the two slots swap numbers. |
+| **Rename…** | FlashFloppy mode: changes the image file name. |
+| **Drag a slot onto another** | HxC mode: the two slots swap numbers. |
+| **Delete** (or the Delete key) | Moves the image to the `CORBEILLE_EPS` folder on the stick, after confirmation. Nothing is erased: to get it back, use "Manage… → New slot from an image" and pick it in that folder. |
+| **Manage… → New slot with a blank disk** | Writes an empty disk to the first free slot. |
+| **Manage… → New slot from an image** | Copies a `.hfe` or `.img` image from the computer to the first free slot (it is checked before writing). |
+| **Manage… → Renumber without gaps** | HxC mode: renumbers the slots 000, 001, 002… in their current order. |
+| **Manage… → Open the stick's trash folder** | Opens the `CORBEILLE_EPS` folder on the stick. |
+
+If the open disk comes from a slot whose number changes, EPS Builder follows the change. The
+numbers also change on the Gotek: keep it in mind if you noted where the OS is.
+
 ## On the EPS
 
 1. Set the Gotek to the slot that holds the OS (usually 000) and switch the EPS on.
@@ -147,8 +190,9 @@ slot".
 
 - EPS classic format only (13 bits, 800 KB disks). The native EPS-16+ and ASR-10 formats are
   not written.
-- One layer per created instrument.
-- Detailed envelopes, the filter and the LFO are set on the EPS itself.
+- Instruments that span two disks (very large factory instruments) cannot be opened.
+- Detailed envelopes, the filter, the LFO and the other layer settings are set on the EPS
+  itself; EPS Builder keeps them.
 
 ## License
 

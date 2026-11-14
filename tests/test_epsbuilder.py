@@ -540,6 +540,253 @@ def test_gui_smoke():
         win.close()
 
 
+def _layered_instrument():
+    """Instrument a 3 layers (emplacements 1, 3 et 6), dont deux sons qui partagent leurs echantillons."""
+    rate = ins.rate_hz(20)
+    low = ins.Wavesample("BAS", tone(130.81, 0.2, rate), root_key=48, key_lo=21, key_hi=59)
+    high = ins.Wavesample("HAUT", tone(523.25, 0.2, rate), root_key=72, key_lo=60, key_hi=108,
+                          loop_mode=ins.LOOP_FORWARD, loop_start=200, loop_end=3000)
+    soft = ins.Wavesample("DOUX", tone(261.63, 0.15, rate, decay=8), root_key=60)
+    layers = [ins.Layer("PIANO", [low, high], 0, 90, frozenset({0, 1}), slot=0),
+              ins.Layer("FORT", [soft], 91, 127, frozenset({0}), slot=2),
+              ins.Layer("PAD", [ins.Wavesample("PAD", tone(196.0, 0.3, rate, decay=0.5), root_key=55)], 0, 127,
+                        frozenset({2, 3}), slot=5)]
+    return ins.Instrument("MULTI", layers, key_lo=21, key_hi=108)
+
+
+def test_multilayer_roundtrip():
+    data = ins.build_instrument(_layered_instrument())
+    back = ins.parse_instrument(data)
+    assert [(l.slot, l.name.strip(), l.vel_lo, l.vel_hi, sorted(l.patches)) for l in back.layers] == [
+        (0, "PIANO", 0, 90, [0, 1]), (2, "FORT", 91, 127, [0]), (5, "PAD", 0, 127, [2, 3])]
+    assert [[w.name.strip() for w in l.wavesamples] for l in back.layers] == [["BAS", "HAUT"], ["DOUX"], ["PAD"]]
+    # Un bit par emplacement de layer ; ceux des emplacements inutilises gardent la valeur du modele (7, 1, 2, 3).
+    patches = [data[10 + 2 * (ins.I_PATCHES + p)] for p in range(4)]
+    assert patches == [0b000111, 0b000001, 0b100010, 0b100010], patches
+    # Relu puis reecrit sans modification : fichier identique.
+    assert ins.build_instrument(back) == data
+    # Un layer sans emplacement prend le premier libre ; les patches par defaut suivent l'EPS.
+    extra = ins.Layer("NEUF", [ins.Wavesample("N", tone(440, 0.1, ins.rate_hz(20)))])
+    back.layers.append(extra)
+    again = ins.parse_instrument(ins.build_instrument(back))
+    assert [l.slot for l in again.layers] == [0, 1, 2, 5]
+    assert again.layers[1].patches == ins.default_patches(1)
+    for bad in (lambda: ins.Instrument("X", [ins.Layer(wavesamples=[])] * 1),
+                lambda: ins.Instrument("X", [ins.Layer(wavesamples=[ins.Wavesample("S", tone(440, 0.1, 31250))])] * 9)):
+        try:
+            ins.build_instrument(bad())
+            raise AssertionError("erreur attendue")
+        except ins.InstrumentError:
+            pass
+
+
+def test_shared_samples_are_kept():
+    """Les copies (sons qui partagent les echantillons d'un autre) restent des copies a la reecriture."""
+    rate = ins.rate_hz(20)
+    x = tone(220, 0.5, rate)
+    data = ins.encode_samples(np.concatenate([x, np.zeros(8)]))
+    pool = ins.SampleData(data)
+    a = ins.Wavesample("ORIG", ins.decode_samples(data[:len(x) * 2]), root_key=57, key_lo=21, key_hi=64,
+                       pool=pool, pool_start=0)
+    b = ins.Wavesample("COPIE", ins.decode_samples(data[1000 * 2:len(x) * 2]), root_key=45, key_lo=65, key_hi=108,
+                       pool=pool, pool_start=1000, loop_mode=ins.LOOP_FORWARD, loop_start=100, loop_end=4000)
+    c = ins.Wavesample("AUTRE LAYER", ins.decode_samples(data[:len(x) * 2]), root_key=60, pool=pool)
+    inst = ins.Instrument("PARTAGE", [ins.Layer("A", [a, b]), ins.Layer("B", [c])])
+    out = ins.build_instrument(inst)
+    assert len(out) < 2 * len(data)                         # les echantillons ne sont ecrits qu'une fois
+    back = ins.parse_instrument(out)
+    ws = back.all_wavesamples()
+    assert ws[0].pool is ws[1].pool is ws[2].pool
+    assert ws[1].pool_start == 1000 and (ws[1].loop_start, ws[1].loop_end) == (100, 4000)
+    assert np.array_equal(ws[1].samples, b.samples) and np.array_equal(ws[2].samples, a.samples)
+    copy_field = lambda w: (w.params[10 + 2 * ins.W_COPY_WS], w.params[10 + 2 * ins.W_COPY_LAYER])
+    assert [copy_field(w) for w in ws] == [(0, 0), (1, 0), (1, 0)]
+    # Ne toucher qu'a la boucle garde le partage ; retravailler le son le detache.
+    specs = [project.SampleSpec(None, None, 21, 64, True, None, ws[0], project.SoundEdit(
+                 start=0, end=len(ws[0].samples) - 1, rate_code=ws[0].rate_code, loop_mode=ins.LOOP_FORWARD,
+                 loop_start=50, loop_end=5000)),
+             project.SampleSpec(None, None, 65, 108, True, None, ws[1], project.SoundEdit(rate_code=40))]
+    edited = project.make_wavesamples(specs)
+    assert edited[0].pool is ws[0].pool and (edited[0].loop_start, edited[0].loop_end) == (50, 5000)
+    assert edited[1].pool is None and edited[1].rate_code == 40
+    rebuilt = ins.parse_instrument(ins.build_instrument(ins.Instrument("P2", [ins.Layer("A", edited)])))
+    assert rebuilt.all_wavesamples()[0].loop_start == 50 and rebuilt.all_wavesamples()[1].rate_code == 40
+
+
+def test_hidden_bytes_and_incomplete_instrument():
+    data = bytearray(ins.build_instrument(_layered_instrument()))
+    lo = ins._get_offset(data, 10 + 2 * ins.I_LAYER_OFFSETS)
+    data[lo + 10 + 1] = 0xD0                              # reglage cache dans l'octet faible du nom
+    back = ins.parse_instrument(bytes(data))
+    back.layers[0].name = "RENOMME"
+    out = ins.build_instrument(back)
+    assert out[lo + 10 + 1] == 0xD0 and ins.parse_instrument(out).layers[0].name.strip() == "RENOMME"
+    try:
+        ins.parse_instrument(bytes(data[:len(data) // 2]))   # instrument coupe (suite sur une autre disquette)
+        raise AssertionError("erreur attendue")
+    except ins.InstrumentError as ex:
+        assert "incomplet" in str(ex)
+
+
+def test_reference_disks():
+    """Disquettes d'usine (non fournies) : EPSBUILDER_REFERENCE=<dossier d'images .img/.hfe>. Chaque
+    instrument relu puis reecrit doit garder ses layers, ses patches, ses sons et leurs reglages."""
+    import glob
+    folder = os.environ.get("EPSBUILDER_REFERENCE")
+    if not folder or not os.path.isdir(folder):
+        return
+    checked = 0
+    for path in sorted(glob.glob(os.path.join(folder, "*"))):
+        if not path.upper().endswith((".IMG", ".HFE")):
+            continue
+        disk = EnsoniqDisk.load(path)
+        for e in disk.entries():
+            if e.file_type != TYPE_EPS_INSTRUMENT:
+                continue
+            try:
+                a = ins.parse_instrument(disk.read_file(e))
+            except ins.InstrumentError as ex:
+                assert "incomplet" in str(ex), (path, e.name, ex)
+                continue
+            out = ins.build_instrument(a)
+            b = ins.parse_instrument(out)
+            assert len(out) <= len(disk.read_file(e)) + 512, (path, e.name)
+            assert [(l.slot, l.name, l.vel_lo, l.vel_hi, l.patches) for l in a.layers] == \
+                   [(l.slot, l.name, l.vel_lo, l.vel_hi, l.patches) for l in b.layers], (path, e.name)
+            for wa, wb in zip(a.all_wavesamples(), b.all_wavesamples()):
+                assert (wa.name, wa.root_key, wa.keys, wa.loop_mode, wa.loop_start, wa.loop_end, wa.params[10 + 28:]) == \
+                       (wb.name, wb.root_key, wb.keys, wb.loop_mode, wb.loop_start, wb.loop_end, wb.params[10 + 28:]), (path, e.name, wa.name)
+                assert np.array_equal(wa.samples, wb.samples)
+            checked += 1
+    print(f"    {checked} instruments de reference verifies")
+
+
+def test_usb_slot_management():
+    with tempfile.TemporaryDirectory() as tmp:
+        open(os.path.join(tmp, "HXCSDFE.CFG"), "wb").write(b"HXCFECFGV1.0")
+        key = usbkey.UsbKey(tmp)
+        for n, label in ((0, "ZERO"), (1, "UN"), (4, "QUATRE")):
+            d = EnsoniqDisk.blank(label=label)
+            d.add_file(label, 3, bytes([n + 1]) * 512 * 4)
+            key.write(d, key.filename_for(n))
+        content = lambda: [(s.number, s.describe()) for s in key.slots()]
+        assert content() == [(0, "ZERO"), (1, "UN"), (4, "QUATRE")]
+        slots = key.slots()
+        assert key.move(slots[2], 2) == 4                      # numero libre : simple deplacement
+        assert content() == [(0, "ZERO"), (1, "UN"), (2, "QUATRE")]
+        assert key.move(key.slots()[0], 2) is None             # numero pris : echange
+        assert content() == [(0, "QUATRE"), (1, "UN"), (2, "ZERO")]
+        trashed = key.delete(key.slots()[1])
+        assert os.path.isfile(trashed) and os.path.dirname(trashed) == key.trash_folder()
+        assert content() == [(0, "QUATRE"), (2, "ZERO")]       # la corbeille n'est pas un emplacement
+        assert key.compact() == [("DSKA0002.hfe", "DSKA0001.hfe")]
+        assert content() == [(0, "QUATRE"), (1, "ZERO")]
+        key.add_blank(key.filename_for(key.next_free_number()))
+        key.add_from_file(trashed, key.filename_for(key.next_free_number()))
+        assert content() == [(0, "QUATRE"), (1, "ZERO"), (2, "(vide)"), (3, "UN")]
+        assert not any(n.startswith("~") for n in os.listdir(tmp))
+        for bad in (lambda: key.add_blank("JOLI NOM.hfe"),       # mode HxC : noms DSKAnnnn imposes
+                    lambda: key.add_from_file(os.path.join(tmp, "HXCSDFE.CFG"), key.filename_for(9)),
+                    lambda: key.move(key.slots()[0], 10000)):
+            try:
+                bad()
+                raise AssertionError("erreur attendue")
+            except usbkey.UsbKeyError:
+                pass
+        # FlashFloppy : noms libres, renommage (y compris de casse seule)
+        ff = usbkey.UsbKey(tmp, usbkey.MODE_FLASHFLOPPY)
+        slot = next(s for s in ff.slots() if s.filename == "DSKA0003.hfe")
+        assert ff.rename(slot, "Mes Sons") == "Mes Sons.hfe"
+        slot = next(s for s in ff.slots() if s.filename == "Mes Sons.hfe")
+        assert ff.rename(slot, "MES SONS.HFE") == "MES SONS.HFE"
+        assert "MES SONS.HFE" in os.listdir(tmp)
+        try:
+            ff.rename(next(s for s in ff.slots() if s.filename == "MES SONS.HFE"), "DSKA0000.hfe")
+            raise AssertionError("ecrasement non signale")
+        except usbkey.UsbKeyError:
+            pass
+
+
+def test_gui_layers_and_slots():
+    """Interface : instrument a plusieurs layers (creation, modification), gestion des emplacements."""
+    try:
+        from PySide6 import QtCore, QtWidgets
+    except ImportError:
+        return
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from epsbuilder import gui
+    with tempfile.TemporaryDirectory() as tmp:
+        QtCore.QSettings.setDefaultFormat(QtCore.QSettings.IniFormat)
+        QtCore.QSettings.setPath(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, tmp)
+        QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+        paths = []
+        for note, freq in (("C3", 130.81), ("C5", 523.25), ("G4", 392.0)):
+            p = os.path.join(tmp, f"son_{note}.wav")
+            audio.write_wav(p, tone(freq, 0.2, 44100), 44100)
+            paths.append(p)
+        win = gui.MainWindow()
+        win.confirm = lambda *a, **k: True
+        errors = []
+        win.error = lambda ex: errors.append(str(ex))
+        win.add_files(paths[:2])
+        win.layer_name.textEdited.emit("doux")
+        win.vel_hi.setValue(80)
+        win.add_layer()
+        assert win.current == 1 and win.layers[1].slot == 1 and not win.samples
+        win.add_instrument_to_disk()                       # layer vide : refuse, avec explication
+        assert errors and "aucun son" in errors[-1] and not win.disk.entries()
+        win.add_files([paths[2]])
+        win.vel_lo.setValue(81)
+        win.patch_boxes[2].setChecked(True)
+        win.name_edit.setText("DEUX")
+        assert "2 layers" in win.estimate.text()
+        win.add_instrument_to_disk()
+        inst = ins.parse_instrument(win.disk.read_file(win.disk.find("DEUX")))
+        assert [(l.name.strip(), l.vel_lo, l.vel_hi, len(l.wavesamples)) for l in inst.layers] == [
+            ("DOUX", 0, 80, 2), ("LAYER 2", 81, 127, 1)]
+        assert 2 in inst.layers[1].patches
+        # Modification : les deux layers reviennent dans l'editeur ; on en duplique un, on en supprime un.
+        win.new_instrument()
+        win.disk_table.selectRow(0)
+        win.edit_selected()
+        assert len(win.layers) == 2 and [len(l.samples) for l in win.layers] == [2, 1]
+        assert win.layer_tabs.count() == 2
+        win.layer_tabs.setCurrentIndex(1)
+        assert win.current == 1 and win.samples[0].root == 67
+        win.duplicate_layer()
+        assert len(win.layers) == 3 and win.layers[2].slot == 2 and win.current == 2
+        win.layer_tabs.setCurrentIndex(0)
+        win.remove_layer()
+        win.add_instrument_to_disk()
+        inst = ins.parse_instrument(win.disk.read_file(win.disk.find("DEUX")))
+        assert [(l.slot, len(l.wavesamples)) for l in inst.layers] == [(1, 1), (2, 1)]
+        assert inst.layers[0].patches == inst.layers[1].patches
+        # Gestion des emplacements de la cle depuis l'interface
+        keydir = os.path.join(tmp, "cle")
+        os.mkdir(keydir)
+        open(os.path.join(keydir, "HXCSDFE.CFG"), "wb").write(b"HXCFECFGV1.0")
+        win.set_key_folder(keydir)
+        win.write_to_key(new=True)                         # 000 : la disquette ouverte
+        win.add_blank_slot()                               # 001 : vierge
+        assert [s.number for s in win._slots] == [0, 1] and win.disk_file == "DSKA0000.hfe"
+        win.key_table.selectRow(0)
+        win.move_slot(1)                                   # 000 <-> 001 ; la disquette ouverte suit
+        assert [s.describe() for s in win._slots] == ["(vide)", "DEUX"] and win.disk_file == "DSKA0001.hfe"
+        assert win.selected_slot().number == 1
+        win._dropped_on_key(gui.MIME_SLOT, "DSKA0001.hfe", 0)   # glisser 001 sur 000 : echange
+        assert [s.describe() for s in win._slots] == ["DEUX", "(vide)"] and win.disk_file == "DSKA0000.hfe"
+        win.key_table.selectRow(1)
+        win.delete_slot()
+        assert [s.number for s in win._slots] == [0] and os.listdir(os.path.join(keydir, usbkey.TRASH_DIR))
+        win.key_table.selectRow(0)
+        win.set_slot_number(win.selected_slot(), 5)
+        assert [s.number for s in win._slots] == [5] and win.disk_file == "DSKA0005.hfe"
+        win.compact_slots()
+        assert [s.number for s in win._slots] == [0] and win.disk_file == "DSKA0000.hfe"
+        win.disk_dirty = False
+        win.close()
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
