@@ -16,9 +16,21 @@ can also read.
 The application is available in English and French (menu *Langue / Language*).
 
 **Download:** the ready-to-run Windows application (`EPSBuilder.exe`, no installation needed) is
-attached to the [v0.4.1 release](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1).
+attached to the [v0.5.0 release](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.5.0).
 
 ![EPS Builder main window](docs/screenshot-en.png)
+
+## What's new in 0.5.0
+
+- **Multilayer instruments** ([#3](https://github.com/ChristopheCruz/EPSPatchBuilder/issues/3)):
+  create, load, edit and save instruments with up to 8 layers, each with its own sounds, key
+  zones, velocity range and patch assignment (Patch Select buttons). Factory instruments are
+  rewritten faithfully: sounds that share their samples (EPS "copies") stay shared, and every
+  setting EPS Builder does not edit is kept as it was.
+- **Gotek slot management** ([#4](https://github.com/ChristopheCruz/EPSPatchBuilder/issues/4)):
+  move slots (up/down, new number, drag one slot onto another to swap them), add a slot from a
+  blank disk or from an image file, renumber without gaps, rename (FlashFloppy), and delete a
+  slot to a trash folder on the stick (`CORBEILLE_EPS`) from which it can be recovered.
 
 ## The Ensoniq EPS
 
@@ -52,13 +64,18 @@ between today's audio files and that stick.
 - **Instrument editor**: drag and drop WAV, AIFF, FLAC, MP3 or OGG files (M4A, WMA and others
   if ffmpeg is installed). The root note is read from the file name (`piano_C3.wav`).
 - **Key zones**: automatic split between root notes, or drag the zone edges on the keyboard.
+- **Layers**: up to 8 layers per instrument, each with its own sounds and zones, a velocity
+  range and the patches (Patch Select buttons) in which it plays.
 - **Sound editor**: waveform with start, end and loop markers, fades, per-sound sample rate,
   bit reduction, dynamic compression, zero-crossing snap and automatic loop splice.
 - **Listening**: play a sound, or click a key to hear the instrument at that note (Windows).
-- **Disk**: add, delete, reorder and edit the instruments of a disk image; export sounds as WAV;
-  create a bootable disk by copying the OS from an existing one.
+- **Disk**: add, delete, reorder and edit the instruments of a disk image, multilayer
+  instruments included; export sounds as WAV; create a bootable disk by copying the OS from an
+  existing one.
 - **USB stick**: lists the slots of a Gotek stick with their contents, writes disks with
   read-back verification, copies instruments between slots by drag and drop, text catalogue.
+  Slots can be moved, renumbered, renamed, added (blank or from an image) and deleted to a
+  trash folder on the stick.
 
 ## Example disk
 
@@ -96,7 +113,7 @@ which belongs to Ensoniq, and sound samples that remain the property of their au
 
 ## Building the Windows application
 
-A prebuilt `EPSBuilder.exe` is available on the [release page](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.4.1); build it yourself
+A prebuilt `EPSBuilder.exe` is available on the [release page](https://github.com/ChristopheCruz/EPSPatchBuilder/releases/tag/v0.5.0); build it yourself
 only if you want to modify the program.
 
 Double-click `build_windows.bat`. The script installs the dependencies in a `.venv` folder,
@@ -128,9 +145,9 @@ The full manual is in [`epsbuilder/MANUAL.md`](epsbuilder/MANUAL.md)
 |---|---|
 | `epsbuilder/gui.py` | graphical interface (PySide6) |
 | `epsbuilder/soundedit.py` | sound editor: waveform, trimming, loop |
-| `epsbuilder/usbkey.py` | USB stick: slots, verified writes, catalogue |
+| `epsbuilder/usbkey.py` | USB stick: slots (move, rename, add, trash), verified writes, catalogue |
 | `epsbuilder/project.py` | audio file → instrument → disk pipeline |
-| `epsbuilder/instrument.py` | EPS instrument format (layers, wavesamples, zones, loops, envelope) |
+| `epsbuilder/instrument.py` | EPS instrument format (layers, patches, wavesamples and shared samples, zones, loops, envelope) |
 | `epsbuilder/disk.py` | Ensoniq file system (directory, allocation table) |
 | `epsbuilder/hfe.py` | HFE reading and writing (MFM) |
 | `epsbuilder/audio.py` | audio reading, mono mix, resampling, level, compression |
@@ -142,7 +159,11 @@ The full manual is in [`epsbuilder/MANUAL.md`](epsbuilder/MANUAL.md)
 - Tested on a real EPS classic (OS 2.49) with a Gotek running the HxC firmware.
 - EPS classic format only (13 bits, 800 KB disks). The native EPS-16+ and ASR-10 formats are
   not written, and FlashFloppy naming has not been tested on hardware.
-- One layer per created instrument. Detailed envelopes, filter and LFO are set on the EPS.
+- Instruments that span two disks (very large factory instruments) cannot be opened.
+- Detailed envelopes, filter, LFO and the other layer settings are set on the EPS; EPS Builder
+  keeps them unchanged when it rewrites an instrument.
+- Multilayer instruments created from scratch have been checked against factory disks but
+  not yet on hardware.
 
 ## Support
 

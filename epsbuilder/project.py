@@ -116,15 +116,33 @@ def auto_zones(roots: list[int]) -> list[tuple[int, int]]:
     return zones
 
 
-def make_instrument(name: str, specs: list[SampleSpec], rate_hz: float | None = DEFAULT_RATE_HZ,
-                    normalize: bool = True, trim: bool = True,
-                    envelope: str = ins.ENV_SUSTAIN, base: ins.Instrument | None = None) -> ins.Instrument:
-    """Cree un instrument a un layer.
+@dataclass
+class LayerSpec:
+    """Un layer de l'instrument a construire."""
+    specs: list[SampleSpec]
+    name: str = "UNNAMEDLAYER"
+    vel_lo: int = 0
+    vel_hi: int = 127
+    patches: frozenset[int] | None = None      # None : reglage par defaut de l'EPS
+    base: ins.Layer | None = None              # layer d'origine (instrument relu) : emplacement et reglages
+    slot: int | None = None                    # emplacement 0-7 ; None : celui du layer d'origine, sinon le premier libre
+
+
+def _loop_only(edit: SoundEdit, src: ins.Wavesample) -> bool:
+    """Les reglages ne touchent que la boucle d'un son deja present (rien a recalculer)."""
+    n = len(src.samples)
+    return (edit.start in (None, 0) and edit.end in (None, n - 1) and edit.rate_code in (None, src.rate_code)
+            and edit.bits == 13 and edit.compress == 0 and not edit.fade_in_ms and not edit.fade_out_ms)
+
+
+def make_wavesamples(specs: list[SampleSpec], rate_hz: float | None = DEFAULT_RATE_HZ, normalize: bool = True,
+                     trim: bool = True, envelope: str = ins.ENV_SUSTAIN) -> list[ins.Wavesample]:
+    """Les sons d'un layer.
 
     Chaque element est soit un fichier audio (converti a rate_hz, 52 kHz au plus, None = frequence
     du fichier), soit un son deja present dans un instrument (spec.wavesample). Sans reglages
     (spec.edit), ce dernier est repris tel quel ; avec, il est retravaille en gardant ses autres
-    parametres. base : instrument d'origine dont on conserve l'etendue et le layer.
+    parametres.
     """
     if not specs:
         raise ValueError(T("Aucun son"))
@@ -139,21 +157,28 @@ def make_instrument(name: str, specs: list[SampleSpec], rate_hz: float | None = 
         sounds.append(snd)
         roots.append(root)
     zones = auto_zones(roots)
-    layer = ins.Layer()
-    if base is not None and base.layers:
-        layer.name, layer.vel_lo, layer.vel_hi = base.layers[0].name, base.layers[0].vel_lo, base.layers[0].vel_hi
+    out: list[ins.Wavesample] = []
     for spec, snd, root, zone in zip(specs, sounds, roots, zones):
         key_lo = spec.key_lo if spec.key_lo is not None else zone[0]
         key_hi = spec.key_hi if spec.key_hi is not None else zone[1]
         if spec.wavesample is not None:
             src = spec.wavesample
             ws = replace(src, name=spec.name or src.name, root_key=root, key_lo=key_lo, key_hi=key_hi)
-            if spec.edit is not None:
+            if spec.edit is not None and _loop_only(spec.edit, src):
+                # Seule la boucle change : le son garde ses echantillons (et leur partage eventuel).
+                ws.loop_mode = spec.edit.loop_mode
+                if spec.edit.looped:
+                    n = len(src.samples)
+                    ls = 0 if spec.edit.loop_start is None else max(0, min(int(spec.edit.loop_start), n - 2))
+                    le = n - 1 if spec.edit.loop_end is None else max(ls + 1, min(int(spec.edit.loop_end), n - 1))
+                    ws.loop_start, ws.loop_end = ls, le
+            elif spec.edit is not None:
                 # Son de la disquette retravaille : niveau conserve, sauf apres compression.
                 x, code, mode, ls, le = process_sound(src.samples, src.rate, spec.edit, src.rate_code,
                                                       normalize=spec.edit.compress > 0, trim=False,
                                                       allow_upsample=True)
                 ws.samples, ws.rate_code, ws.loop_mode, ws.loop_start, ws.loop_end = x, code, mode, ls, le
+                ws.detach()                            # nouveaux echantillons, propres a ce son
             else:
                 was_looped = src.loop_mode >= ins.LOOP_FORWARD
                 if spec.loop and not was_looped:
@@ -162,7 +187,7 @@ def make_instrument(name: str, specs: list[SampleSpec], rate_hz: float | None = 
                         ws.loop_start, ws.loop_end = 0, len(src.samples) - 1
                 elif not spec.loop and was_looped:
                     ws.loop_mode = ins.LOOP_FORWARD_NO_LOOP
-            layer.wavesamples.append(ws)
+            out.append(ws)
             continue
         edit = spec.edit
         if edit is None:
@@ -170,15 +195,51 @@ def make_instrument(name: str, specs: list[SampleSpec], rate_hz: float | None = 
                              loop_start=snd.loop_start, loop_end=snd.loop_end)
         default_code = ins.rate_code_for(rate_hz) if rate_hz else ins.rate_code_for(min(snd.rate, 52100.0))
         x, code, mode, ls, le = process_sound(snd.samples, snd.rate, edit, default_code, normalize, trim)
-        layer.wavesamples.append(ins.Wavesample(
+        out.append(ins.Wavesample(
             name=(spec.name or os.path.splitext(os.path.basename(spec.path))[0]),
             samples=x, rate_code=code, root_key=root, envelope=envelope, key_lo=key_lo, key_hi=key_hi,
             loop_mode=mode, loop_start=ls, loop_end=le))
-    lo = min(w.key_lo for w in layer.wavesamples)
-    hi = max(w.key_hi for w in layer.wavesamples)
+    return out
+
+
+def make_layered_instrument(name: str, layers: list[LayerSpec], rate_hz: float | None = DEFAULT_RATE_HZ,
+                            normalize: bool = True, trim: bool = True, envelope: str = ins.ENV_SUSTAIN,
+                            base: ins.Instrument | None = None) -> ins.Instrument:
+    """Cree un instrument de 1 a 8 layers. base : instrument d'origine (modification) dont on
+    conserve l'etendue et les reglages generaux ; chaque LayerSpec.base garde ceux de son layer."""
+    if not layers:
+        raise ValueError(T("Aucun layer"))
+    if len(layers) > ins.MAX_LAYERS:
+        raise ins.InstrumentError(T("Un instrument contient de 1 a 8 layers"))
+    built = []
+    for spec in layers:
+        if not spec.specs:
+            raise ins.InstrumentError(T("Le layer « {0} » est vide").format(spec.name.strip()))
+        ws = make_wavesamples(spec.specs, rate_hz, normalize, trim, envelope)
+        b = spec.base
+        slot = spec.slot if spec.slot is not None else (b.slot if b is not None else None)
+        built.append(ins.Layer(spec.name, ws, spec.vel_lo, spec.vel_hi, spec.patches, slot,
+                               b.params if b is not None else None))
+    every = [w for layer in built for w in layer.wavesamples]
+    if len(every) > ins.MAX_WAVESAMPLES:
+        raise ins.InstrumentError(T("Un instrument contient au maximum 127 sons"))
     if base is not None:
-        return ins.Instrument(name, [layer], key_lo=base.key_lo, key_hi=base.key_hi)
-    return ins.Instrument(name, [layer], key_lo=min(36, max(lo, ins.FIRST_KEY)), key_hi=max(96, min(hi, ins.LAST_KEY)))
+        return ins.Instrument(name, built, key_lo=base.key_lo, key_hi=base.key_hi, params=base.params)
+    lo = min(w.key_lo for w in every)
+    hi = max(w.key_hi for w in every)
+    return ins.Instrument(name, built, key_lo=min(36, max(lo, ins.FIRST_KEY)), key_hi=max(96, min(hi, ins.LAST_KEY)))
+
+
+def make_instrument(name: str, specs: list[SampleSpec], rate_hz: float | None = DEFAULT_RATE_HZ,
+                    normalize: bool = True, trim: bool = True,
+                    envelope: str = ins.ENV_SUSTAIN, base: ins.Instrument | None = None) -> ins.Instrument:
+    """Cree un instrument a un layer (voir make_wavesamples). base : instrument d'origine dont on
+    conserve l'etendue, les reglages et le premier layer."""
+    first = base.layers[0] if base is not None and base.layers else None
+    layer = LayerSpec(specs)
+    if first is not None:
+        layer = LayerSpec(specs, first.name, first.vel_lo, first.vel_hi, first.patches, first)
+    return make_layered_instrument(name, [layer], rate_hz, normalize, trim, envelope, base)
 
 
 def add_instrument(disk: EnsoniqDisk, inst: ins.Instrument) -> int:

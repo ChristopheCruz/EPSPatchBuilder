@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+import time
 from dataclasses import dataclass, field
 
 from .i18n import T
@@ -18,6 +19,8 @@ from .disk import DiskError, DiskSummary, EnsoniqDisk, quick_summary
 MODE_HXC, MODE_FLASHFLOPPY = "hxc", "flashfloppy"
 _SLOT_RE = re.compile(r"^DSKA(\d{4})\.HFE$", re.IGNORECASE)
 MAX_SLOT = 9999
+TRASH_DIR = "CORBEILLE_EPS"          # emplacements supprimes : deplaces ici, jamais effaces
+_TEMP_PREFIX = "~EPSB"               # noms provisoires pendant un echange d'emplacements
 
 
 class UsbKeyError(Exception):
@@ -102,7 +105,9 @@ class UsbKey:
             raise UsbKeyError(T("Cle inaccessible : {0}").format(ex.strerror or ex)) from ex
         out = []
         for name in names:
-            if name.startswith(".") or not name.upper().endswith(".HFE"):
+            if name.startswith((".", _TEMP_PREFIX)) or not name.upper().endswith(".HFE"):
+                continue
+            if not os.path.isfile(os.path.join(self.folder, name)):
                 continue
             m = _SLOT_RE.match(name)
             if self.mode == MODE_HXC and not m:
@@ -154,6 +159,125 @@ class UsbKey:
         if bytes(check.img) != bytes(disk.img):
             raise UsbKeyError(T("Le fichier relu sur la cle differe de l'original : cle defectueuse ?"))
         return path
+
+    # ------------------------------------------------------------------ gestion des emplacements
+    def _path(self, filename: str) -> str:
+        return os.path.join(self.folder, filename)
+
+    def _rename(self, old: str, new: str) -> None:
+        try:
+            os.rename(self._path(old), self._path(new))
+        except OSError as ex:
+            raise UsbKeyError(T("Renommage impossible : {0}").format(ex.strerror or ex)) from ex
+
+    def _temp_name(self) -> str:
+        n = 0
+        while self.existing_name(f"{_TEMP_PREFIX}{n}.hfe"):
+            n += 1
+        return f"{_TEMP_PREFIX}{n}.hfe"
+
+    def _check_name(self, filename: str) -> str:
+        filename = filename.strip()
+        if not filename.upper().endswith(".HFE"):
+            filename += ".hfe"
+        if filename.upper() == ".HFE" or any(c in filename for c in '\\/:*?"<>|') or filename.startswith((".", _TEMP_PREFIX)):
+            raise UsbKeyError(T("Nom de fichier invalide"))
+        if self.mode == MODE_HXC and not _SLOT_RE.match(filename):
+            raise UsbKeyError(T("En mode HxC, les images s'appellent DSKA0000.HFE, DSKA0001.HFE…"))
+        return filename
+
+    def move(self, slot: Slot, number: int) -> int | None:
+        """Mode HxC : donne le numero demande a l'emplacement. Si ce numero est deja pris, les deux
+        emplacements echangent leurs numeros. Retourne le numero libere (None si aucun)."""
+        if self.mode != MODE_HXC or slot.number is None:
+            raise UsbKeyError(T("Seuls les emplacements numérotés (mode HxC) peuvent changer de numéro"))
+        if not 0 <= number <= MAX_SLOT:
+            raise UsbKeyError(T("Numéro d'emplacement hors limites (0 à {0})").format(MAX_SLOT))
+        if number == slot.number:
+            return None
+        if self.existing_name(slot.filename) is None:
+            raise UsbKeyError(T("{0} n'existe plus sur la clé").format(slot.filename))
+        target = self.existing_name(self.filename_for(number))
+        if target is None:
+            self._rename(slot.filename, self.filename_for(number))
+            return slot.number
+        temp = self._temp_name()                       # echange en trois renommages, sans rien ecraser
+        self._rename(target, temp)
+        try:
+            self._rename(slot.filename, self.filename_for(number))
+        except UsbKeyError:
+            self._rename(temp, target)
+            raise
+        self._rename(temp, self.filename_for(slot.number))
+        return None
+
+    def rename(self, slot: Slot, filename: str) -> str:
+        """Mode FlashFloppy : change le nom du fichier image. Retourne le nouveau nom."""
+        filename = self._check_name(filename)
+        existing = self.existing_name(filename)
+        if existing and existing.upper() != slot.filename.upper():
+            raise UsbKeyError(T("{0} existe deja sur la cle").format(existing))
+        if existing == filename:
+            return filename
+        if existing:                                   # seule la casse change (FAT ne distingue pas)
+            temp = self._temp_name()
+            self._rename(slot.filename, temp)
+            self._rename(temp, filename)
+        else:
+            self._rename(slot.filename, filename)
+        return filename
+
+    def trash_folder(self) -> str:
+        return self._path(TRASH_DIR)
+
+    def delete(self, slot: Slot) -> str:
+        """Deplace l'image dans la corbeille de la cle (rien n'est efface). Retourne son chemin."""
+        if self.existing_name(slot.filename) is None:
+            raise UsbKeyError(T("{0} n'existe plus sur la clé").format(slot.filename))
+        trash = self.trash_folder()
+        stem, ext = os.path.splitext(slot.filename)
+        dest = os.path.join(trash, f"{stem}_{time.strftime('%Y%m%d-%H%M%S')}{ext}")
+        k = 1
+        while os.path.exists(dest):
+            dest = os.path.join(trash, f"{stem}_{time.strftime('%Y%m%d-%H%M%S')}_{k}{ext}")
+            k += 1
+        try:
+            os.makedirs(trash, exist_ok=True)
+            os.replace(self._path(slot.filename), dest)
+        except OSError as ex:
+            raise UsbKeyError(T("Suppression impossible : {0}").format(ex.strerror or ex)) from ex
+        return dest
+
+    def add_blank(self, filename: str, hd: bool = False, label: str = "") -> str:
+        """Nouvel emplacement contenant une disquette vierge."""
+        return self.write(EnsoniqDisk.blank(hd=hd, label=label), self._check_name(filename))
+
+    def add_from_file(self, path: str, filename: str) -> str:
+        """Nouvel emplacement a partir d'une image (.hfe ou .img) de l'ordinateur."""
+        try:
+            disk = EnsoniqDisk.load(path)
+        except (DiskError, ValueError) as ex:
+            raise UsbKeyError(T("{0} : image illisible ({1})").format(os.path.basename(path), ex)) from ex
+        except OSError as ex:
+            raise UsbKeyError(T("lecture impossible : {0}").format(ex.strerror or ex)) from ex
+        return self.write(disk, self._check_name(filename))
+
+    def compact(self) -> list[tuple[str, str]]:
+        """Mode HxC : renumerote les emplacements 000, 001, 002… dans leur ordre actuel, sans trou.
+        Retourne la liste des renommages (ancien nom, nouveau nom)."""
+        if self.mode != MODE_HXC:
+            raise UsbKeyError(T("Seuls les emplacements numérotés (mode HxC) peuvent changer de numéro"))
+        slots = self.slots()
+        moves = [(s.filename, self.filename_for(i)) for i, s in enumerate(slots) if s.number != i]
+        # Deux temps : d'abord des noms provisoires, puis les noms definitifs (aucun ecrasement possible).
+        temps = []
+        for old, _new in moves:
+            temp = self._temp_name()
+            self._rename(old, temp)
+            temps.append(temp)
+        for temp, (_old, new) in zip(temps, moves):
+            self._rename(temp, new)
+        return moves
 
     def catalog(self) -> str:
         lines = [T("Catalogue de la cle {0}").format(self.folder), ""]

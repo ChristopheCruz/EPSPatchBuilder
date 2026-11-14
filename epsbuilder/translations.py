@@ -603,4 +603,79 @@ EN = {
     "F": "E",
     "B": "L",
     "{0} Ko": "{0} KB",
+    # 0.5.0 : instruments a plusieurs layers
+    "Chaque layer a ses propres sons et zones de clavier.\nLes layers jouent ensemble, selon la vélocité et le patch choisi sur l'EPS.":
+        "Each layer has its own sounds and keyboard zones.\nLayers play together, depending on velocity and on the patch selected on the EPS.",
+    "+ Layer": "+ Layer",
+    "Ajoute un layer vide (8 au maximum).": "Adds an empty layer (8 at most).",
+    "Dupliquer": "Duplicate",
+    "Ajoute une copie du layer affiché, avec ses sons.": "Adds a copy of the displayed layer, with its sounds.",
+    "Supprimer le layer": "Delete layer",
+    "Nom du layer :": "Layer name:",
+    "Vélocité :": "Velocity:",
+    "Le layer ne joue que si la touche est frappée avec une vélocité dans cette plage\n(0-127 : toujours).":
+        "The layer only plays when the key is struck with a velocity in this range\n(0-127: always).",
+    "Patches :": "Patches:",
+    "Patch {0} : le layer joue quand ce patch est choisi avec les boutons Patch Select de l'EPS\n(0 : aucun bouton, 3 : les deux boutons).":
+        "Patch {0}: the layer plays when this patch is selected with the EPS Patch Select buttons\n(0: no button, 3: both buttons).",
+    "Layer {0} ajouté : ajoutez-y des sons.": "Layer {0} added: add sounds to it.",
+    "Supprimer le layer « {0} » et ses {1} son(s) ?": "Delete layer “{0}” and its {1} sound(s)?",
+    "La disquette n'est pas modifiée tant que l'instrument n'y est pas écrit.":
+        "The disk is not changed until the instrument is written to it.",
+    "{0} layers, ": "{0} layers, ",
+    "Layer {0} ({1}) : ": "Layer {0} ({1}): ",
+    "{0}ce layer n'a aucun son : ajoutez-en ou supprimez le layer.":
+        "{0}this layer has no sound: add some or delete the layer.",
+    "Aucun layer": "No layer",
+    "Le layer « {0} » est vide": "Layer “{0}” is empty",
+    "Plage de vélocité invalide pour le layer {0}": "Invalid velocity range for layer {0}",
+    "Le son {0!r} est incoherent": "Sound {0!r} is inconsistent",
+    "L'instrument est trop gros (plus de 1 Mo)": "The instrument is too large (over 1 MB)",
+    "Instrument incomplet : il continue sans doute sur une autre disquette, ce que EPS Builder ne gère pas":
+        "Incomplete instrument: it probably continues on another disk, which EPS Builder does not handle",
+    # 0.5.0 : gestion des emplacements de la cle
+    "Échange l'emplacement avec le précédent (numéro - 1).": "Swaps the slot with the previous one (number - 1).",
+    "Échange l'emplacement avec le suivant (numéro + 1).": "Swaps the slot with the next one (number + 1).",
+    "Numéro…": "Number…",
+    "Renommer…": "Rename…",
+    "Gérer…": "Manage…",
+    "Nouvel emplacement avec une disquette vierge": "New slot with a blank disk",
+    "Nouvel emplacement depuis une image (.hfe, .img)…": "New slot from an image (.hfe, .img)…",
+    "Renuméroter sans trous (000, 001, 002…)": "Renumber without gaps (000, 001, 002…)",
+    "Ouvrir la corbeille de la clé": "Open the stick's trash folder",
+    "Déplace l'image dans la corbeille de la clé ({0}) : rien n'est effacé.":
+        "Moves the image to the stick's trash folder ({0}): nothing is erased.",
+    "Renommer": "Rename",
+    "Nouveau nom du fichier sur la clé :": "New file name on the stick:",
+    "Numéro de l'emplacement": "Slot number",
+    "Nouveau numéro pour l'emplacement {0} :\n(s'il est déjà pris, les deux emplacements échangent leurs numéros)":
+        "New number for slot {0}:\n(if it is already taken, the two slots swap numbers)",
+    "Emplacements {0} et {1} échangés.": "Slots {0} and {1} swapped.",
+    "Emplacement {0} déplacé en {1}.": "Slot {0} moved to {1}.",
+    "{0} renommé en {1}.": "{0} renamed to {1}.",
+    "Supprimer l'emplacement {0} ?": "Delete slot {0}?",
+    "Contenu : {0}\nL'image sera déplacée dans le dossier {1} de la clé : vous pourrez la récupérer.":
+        "Contents: {0}\nThe image will be moved to the {1} folder on the stick: you can get it back.",
+    "\n\nATTENTION : cet emplacement contient l'OS de l'EPS.": "\n\nWARNING: this slot holds the EPS OS.",
+    "Emplacement {0} mis à la corbeille : {1}": "Slot {0} moved to the trash: {1}",
+    "VIERGE": "BLANK",
+    "Disquette vierge écrite : {0}": "Blank disk written: {0}",
+    "Image de disquette à copier sur la clé": "Disk image to copy to the stick",
+    "Images de disquette (*.hfe *.img);;Tous les fichiers (*)": "Disk images (*.hfe *.img);;All files (*)",
+    "{0} copiée sur la clé : {1}": "{0} copied to the stick: {1}",
+    "Renuméroter les emplacements 000, 001, 002… sans trous ?": "Renumber the slots 000, 001, 002… without gaps?",
+    "L'ordre est conservé. Sur le Gotek, les numéros des disquettes changeront.":
+        "The order is kept. On the Gotek, the disk numbers will change.",
+    "{0} emplacement(s) renuméroté(s).": "{0} slot(s) renumbered.",
+    "En mode FlashFloppy, l'ordre suit les noms : utilisez « Renommer… ».":
+        "In FlashFloppy mode, the order follows the names: use “Rename…”.",
+    "En mode HxC, les images s'appellent DSKA0000.HFE, DSKA0001.HFE…":
+        "In HxC mode, images are named DSKA0000.HFE, DSKA0001.HFE…",
+    "Seuls les emplacements numérotés (mode HxC) peuvent changer de numéro":
+        "Only numbered slots (HxC mode) can change number",
+    "Numéro d'emplacement hors limites (0 à {0})": "Slot number out of range (0 to {0})",
+    "{0} n'existe plus sur la clé": "{0} no longer exists on the stick",
+    "Renommage impossible : {0}": "Cannot rename: {0}",
+    "Suppression impossible : {0}": "Cannot delete: {0}",
+    "{0} : image illisible ({1})": "{0}: unreadable image ({1})",
 }

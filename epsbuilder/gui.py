@@ -102,6 +102,28 @@ class SampleItem:
         return T("{0}\n{1:.0f} Hz, {2} échantillons").format(where, self.rate, len(self.samples))
 
 
+@dataclass(eq=False)
+class LayerState:
+    """Un layer de l'instrument en cours : ses sons et ses reglages."""
+    slot: int                                                 # emplacement 0-7 dans l'instrument
+    name: str = "UNNAMEDLAYER"
+    vel_lo: int = 0
+    vel_hi: int = 127
+    patches: frozenset = frozenset({0})
+    samples: list = field(default_factory=list)               # SampleItem
+    auto: bool = True                                         # zones automatiques
+    base: ins.Layer | None = None                             # layer relu sur la disquette
+
+    @classmethod
+    def new(cls, slot: int, name: str = "UNNAMEDLAYER") -> "LayerState":
+        return cls(slot, name, patches=ins.default_patches(slot))
+
+
+def free_slot(layers: list[LayerState]) -> int | None:
+    used = {s.slot for s in layers}
+    return next((s for s in range(ins.MAX_LAYERS) if s not in used), None)
+
+
 def guess_root(path: str, sound: audio.Sound) -> int:
     """Note de base : lue dans le nom du fichier (« piano_C3.wav »), sinon dans le WAV, sinon C4."""
     stem = os.path.splitext(os.path.basename(path))[0]
@@ -408,7 +430,7 @@ class DiskTable(DragTable):
 
 class KeyTable(DragTable):
     MIME_OUT = MIME_SLOT
-    MIME_IN = (MIME_FILES,)                        # copie d'instruments vers un emplacement
+    MIME_IN = (MIME_FILES, MIME_SLOT)              # copie d'instruments vers un emplacement, ou deplacement
 
 
 def note_combo(value: int) -> QtWidgets.QComboBox:
@@ -427,7 +449,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle(T("EPS Builder {0}").format(__version__))
         self.resize(1320, 900)
         self.settings = QtCore.QSettings("EPSBuilder", "EPSBuilder")
-        self.samples: list[SampleItem] = []
+        self.layers: list[LayerState] = [LayerState.new(0)]
+        self.current = 0                               # layer affiche dans l'editeur
         self.disk = EnsoniqDisk.blank()
         self.disk_name = T("Nouvelle disquette vierge")
         self.disk_dirty = False
@@ -458,6 +481,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.refresh_samples()
         self.refresh_disk()
         self.refresh_drives()
+
+    # ------------------------------------------------------------------ layers
+    @property
+    def samples(self) -> list[SampleItem]:
+        """Les sons du layer affiche."""
+        return self.layers[self.current].samples
+
+    @samples.setter
+    def samples(self, items: list[SampleItem]):
+        self.layers[self.current].samples = items
+
+    def all_items(self) -> list[SampleItem]:
+        return [item for layer in self.layers for item in layer.samples]
 
     # ------------------------------------------------------------------ construction
     def _build_menu(self):
@@ -534,6 +570,7 @@ class MainWindow(QtWidgets.QMainWindow):
         form.addWidget(self.env_box)
         form.addStretch(1)
         lay.addLayout(form)
+        lay.addWidget(self._build_layer_bar())
 
         self.table = SampleTable()
         self.table.filesDropped.connect(self.add_files)
@@ -603,6 +640,170 @@ class MainWindow(QtWidgets.QMainWindow):
         bottom.addWidget(self.to_disk_btn)
         lay.addLayout(bottom)
         return box
+
+    def _build_layer_bar(self) -> QtWidgets.QWidget:
+        """Onglets des layers, et reglages du layer affiche (nom, velocite, patches)."""
+        box = QtWidgets.QFrame()
+        box.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        v = QtWidgets.QVBoxLayout(box)
+        v.setContentsMargins(6, 4, 6, 4)
+        top = QtWidgets.QHBoxLayout()
+        self.layer_tabs = QtWidgets.QTabBar()
+        self.layer_tabs.setExpanding(False)
+        self.layer_tabs.setDrawBase(False)
+        self.layer_tabs.setToolTip(T("Chaque layer a ses propres sons et zones de clavier.\nLes layers jouent "
+                                     "ensemble, selon la vélocité et le patch choisi sur l'EPS."))
+        self.layer_tabs.currentChanged.connect(self._layer_tab_changed)
+        top.addWidget(self.layer_tabs, 1)
+        self.add_layer_btn = QtWidgets.QPushButton(T("+ Layer"))
+        self.add_layer_btn.setToolTip(T("Ajoute un layer vide (8 au maximum)."))
+        self.add_layer_btn.clicked.connect(self.add_layer)
+        self.dup_layer_btn = QtWidgets.QPushButton(T("Dupliquer"))
+        self.dup_layer_btn.setToolTip(T("Ajoute une copie du layer affiché, avec ses sons."))
+        self.dup_layer_btn.clicked.connect(self.duplicate_layer)
+        self.del_layer_btn = QtWidgets.QPushButton(T("Supprimer le layer"))
+        self.del_layer_btn.clicked.connect(self.remove_layer)
+        for b in (self.add_layer_btn, self.dup_layer_btn, self.del_layer_btn):
+            top.addWidget(b)
+        v.addLayout(top)
+
+        row = QtWidgets.QHBoxLayout()
+        row.addWidget(QtWidgets.QLabel(T("Nom du layer :")))
+        self.layer_name = QtWidgets.QLineEdit()
+        self.layer_name.setMaxLength(12)
+        self.layer_name.setMaximumWidth(150)
+        self.layer_name.setValidator(QtGui.QRegularExpressionValidator(QtCore.QRegularExpression(r"[ -~]{0,12}")))
+        self.layer_name.textEdited.connect(self._layer_name_edited)
+        row.addWidget(self.layer_name)
+        row.addSpacing(10)
+        row.addWidget(QtWidgets.QLabel(T("Vélocité :")))
+        self.vel_lo = QtWidgets.QSpinBox()
+        self.vel_hi = QtWidgets.QSpinBox()
+        for box_ in (self.vel_lo, self.vel_hi):
+            box_.setRange(0, 127)
+            box_.setToolTip(T("Le layer ne joue que si la touche est frappée avec une vélocité dans cette plage\n"
+                              "(0-127 : toujours)."))
+            box_.valueChanged.connect(self._velocity_changed)
+        row.addWidget(self.vel_lo)
+        row.addWidget(QtWidgets.QLabel(T("à")))
+        row.addWidget(self.vel_hi)
+        row.addSpacing(10)
+        row.addWidget(QtWidgets.QLabel(T("Patches :")))
+        self.patch_boxes = []
+        for p in range(ins.PATCH_COUNT):
+            cb = QtWidgets.QCheckBox(str(p))
+            cb.setToolTip(T("Patch {0} : le layer joue quand ce patch est choisi avec les boutons Patch Select de "
+                            "l'EPS\n(0 : aucun bouton, 3 : les deux boutons).").format(p))
+            cb.toggled.connect(lambda on, p=p: self._patch_toggled(p, on))
+            self.patch_boxes.append(cb)
+            row.addWidget(cb)
+        row.addStretch(1)
+        v.addLayout(row)
+        return box
+
+    def refresh_layer_bar(self):
+        self._filling_layers = True
+        while self.layer_tabs.count():
+            self.layer_tabs.removeTab(0)
+        for layer in self.layers:
+            label = f"{layer.slot + 1}. {layer.name.strip() or '…'}"
+            if layer.samples:
+                label += f" ({len(layer.samples)})"
+            self.layer_tabs.addTab(label)
+        # La barre a pu etre mise en page vide (hauteur nulle) : on lui redonne sa hauteur.
+        self.layer_tabs.setMinimumHeight(self.layer_tabs.sizeHint().height())
+        self.layer_tabs.updateGeometry()
+        self.layer_tabs.setCurrentIndex(self.current)
+        layer = self.layers[self.current]
+        if self.layer_name.text() != layer.name.strip():
+            self.layer_name.setText(layer.name.strip())
+        self.vel_lo.setValue(layer.vel_lo)
+        self.vel_hi.setValue(layer.vel_hi)
+        for p, cb in enumerate(self.patch_boxes):
+            cb.setChecked(p in layer.patches)
+        self.add_layer_btn.setEnabled(len(self.layers) < ins.MAX_LAYERS)
+        self.dup_layer_btn.setEnabled(len(self.layers) < ins.MAX_LAYERS)
+        self.del_layer_btn.setEnabled(len(self.layers) > 1)
+        self._filling_layers = False
+
+    def show_layer(self, index: int):
+        """Affiche un autre layer dans l'editeur."""
+        index = max(0, min(index, len(self.layers) - 1))
+        self.layers[self.current].auto = self.auto_zones.isChecked()
+        self.current = index
+        self.auto_zones.blockSignals(True)
+        self.auto_zones.setChecked(self.layers[index].auto)
+        self.auto_zones.blockSignals(False)
+        self._shown = None
+        self.refresh_samples([])
+
+    def _layer_tab_changed(self, index: int):
+        if not getattr(self, "_filling_layers", False) and 0 <= index < len(self.layers) and index != self.current:
+            self.show_layer(index)
+
+    def _insert_layer(self, layer: LayerState):
+        self.layers.append(layer)
+        self.layers.sort(key=lambda l: l.slot)
+        self.show_layer(self.layers.index(layer))
+
+    def add_layer(self):
+        slot = free_slot(self.layers)
+        if slot is None:
+            return
+        self._insert_layer(LayerState.new(slot, f"LAYER {slot + 1}"))
+        self.statusBar().showMessage(T("Layer {0} ajouté : ajoutez-y des sons.").format(slot + 1), 6000)
+
+    def duplicate_layer(self):
+        slot = free_slot(self.layers)
+        if slot is None:
+            return
+        src = self.layers[self.current]
+        if len(self.all_items()) + len(src.samples) > ins.MAX_WAVESAMPLES:
+            self.error(T("Un instrument contient au maximum 127 sons."))
+            return
+        items = [SampleItem(s.path, s.sound, s.root, s.lo, s.hi, s.ws, copy(s.edit), copy(s.initial), s.auto)
+                 for s in src.samples]
+        self._insert_layer(LayerState(slot, src.name, src.vel_lo, src.vel_hi, src.patches, items, src.auto))
+
+    def remove_layer(self):
+        if len(self.layers) <= 1:
+            return
+        layer = self.layers[self.current]
+        if layer.samples and not self.confirm(
+                T("Supprimer le layer « {0} » et ses {1} son(s) ?").format(layer.name.strip(), len(layer.samples)),
+                T("La disquette n'est pas modifiée tant que l'instrument n'y est pas écrit.")):
+            return
+        del self.layers[self.current]
+        self.current = min(self.current, len(self.layers) - 1)
+        self.auto_zones.blockSignals(True)
+        self.auto_zones.setChecked(self.layers[self.current].auto)
+        self.auto_zones.blockSignals(False)
+        self._shown = None
+        self.refresh_samples([])
+
+    def _layer_name_edited(self, text: str):
+        self.layer_name.setText(text.upper())
+        self.layers[self.current].name = text.upper()
+        self.refresh_layer_bar()
+
+    def _velocity_changed(self, _value: int):
+        if getattr(self, "_filling_layers", False):
+            return
+        layer = self.layers[self.current]
+        lo, hi = self.vel_lo.value(), self.vel_hi.value()
+        if lo > hi:                                    # les bornes ne se croisent pas
+            if self.sender() is self.vel_lo:
+                hi = lo
+            else:
+                lo = hi
+        layer.vel_lo, layer.vel_hi = lo, hi
+        self.refresh_layer_bar()
+
+    def _patch_toggled(self, patch: int, on: bool):
+        if getattr(self, "_filling_layers", False):
+            return
+        layer = self.layers[self.current]
+        layer.patches = frozenset(layer.patches | {patch}) if on else frozenset(layer.patches - {patch})
 
     def _build_disk_panel(self) -> QtWidgets.QWidget:
         box = QtWidgets.QGroupBox(T("2. Disquette"))
@@ -697,6 +898,36 @@ class MainWindow(QtWidgets.QMainWindow):
         self.key_table.itemSelectionChanged.connect(self._update_buttons)
         self.key_table.itemDoubleClicked.connect(lambda *_: self.open_slot())
         lay.addWidget(self.key_table, 1)
+        manage = QtWidgets.QHBoxLayout()
+        self.slot_up_btn = QtWidgets.QPushButton(T("▲ Monter"))
+        self.slot_up_btn.setToolTip(T("Échange l'emplacement avec le précédent (numéro - 1)."))
+        self.slot_up_btn.clicked.connect(lambda: self.move_slot(-1))
+        self.slot_down_btn = QtWidgets.QPushButton(T("▼ Descendre"))
+        self.slot_down_btn.setToolTip(T("Échange l'emplacement avec le suivant (numéro + 1)."))
+        self.slot_down_btn.clicked.connect(lambda: self.move_slot(1))
+        self.slot_number_btn = QtWidgets.QPushButton(T("Numéro…"))
+        self.slot_number_btn.clicked.connect(self.renumber_or_rename_slot)
+        self.slot_delete_btn = QtWidgets.QPushButton(T("Supprimer"))
+        self.slot_delete_btn.setToolTip(T("Déplace l'image dans la corbeille de la clé ({0}) : rien n'est effacé.").format(usbkey.TRASH_DIR))
+        self.slot_delete_btn.clicked.connect(self.delete_slot)
+        self.slot_more_btn = QtWidgets.QToolButton()
+        self.slot_more_btn.setText(T("Gérer…"))
+        self.slot_more_btn.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        menu = QtWidgets.QMenu(self.slot_more_btn)
+        self.act_blank_slot = menu.addAction(T("Nouvel emplacement avec une disquette vierge"), self.add_blank_slot)
+        self.act_import_slot = menu.addAction(T("Nouvel emplacement depuis une image (.hfe, .img)…"), self.import_image_slot)
+        menu.addSeparator()
+        self.act_compact = menu.addAction(T("Renuméroter sans trous (000, 001, 002…)"), self.compact_slots)
+        self.act_trash = menu.addAction(T("Ouvrir la corbeille de la clé"), self.open_trash)
+        self.slot_more_btn.setMenu(menu)
+        for b in (self.slot_up_btn, self.slot_down_btn, self.slot_number_btn, self.slot_delete_btn):
+            manage.addWidget(b)
+        manage.addStretch(1)
+        manage.addWidget(self.slot_more_btn)
+        lay.addLayout(manage)
+        delete = QtGui.QShortcut(QtGui.QKeySequence.Delete, self.key_table)
+        delete.setContext(Qt.WidgetShortcut)
+        delete.activated.connect(self.delete_slot)
         row = QtWidgets.QHBoxLayout()
         self.open_slot_btn = QtWidgets.QPushButton(T("Ouvrir"))
         self.open_slot_btn.setToolTip(T("Charge cet emplacement dans la partie « Disquette »."))
@@ -741,7 +972,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.remove_btn.setEnabled(bool(rows))
         self.remove_btn.setText(T("Retirer ({0})").format(len(rows)) if len(rows) > 1 else T("Retirer"))
         self.play_btn.setEnabled(bool(rows))
-        self.to_disk_btn.setEnabled(has_sample)
+        self.to_disk_btn.setEnabled(has_sample or bool(self.all_items()))
         entry = self.selected_entry()
         self.delete_btn.setEnabled(entry is not None)
         self.edit_btn.setEnabled(entry is not None and entry.file_type == TYPE_EPS_INSTRUMENT)
@@ -763,6 +994,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.write_sel_btn.setEnabled(slot is not None)
         self.write_new_btn.setEnabled(has_key)
         self.catalog_btn.setEnabled(has_key and self.key_table.rowCount() > 0)
+        hxc = has_key and self.key.mode == usbkey.MODE_HXC
+        numbered = slot is not None and slot.number is not None
+        self.slot_up_btn.setEnabled(hxc and numbered and slot.number > 0)
+        self.slot_down_btn.setEnabled(hxc and numbered and slot.number < usbkey.MAX_SLOT)
+        self.slot_up_btn.setVisible(not has_key or hxc)
+        self.slot_down_btn.setVisible(not has_key or hxc)
+        self.slot_number_btn.setText(T("Numéro…") if (not has_key or hxc) else T("Renommer…"))
+        self.slot_number_btn.setEnabled(slot is not None)
+        self.slot_delete_btn.setEnabled(slot is not None)
+        self.slot_more_btn.setEnabled(has_key)
+        self.act_compact.setEnabled(hxc and any(s.number != i for i, s in enumerate(self._slots)))
+        self.act_trash.setEnabled(has_key and os.path.isdir(self.key.trash_folder()))
 
     # ------------------------------------------------------------------ sons
     def browse_samples(self):
@@ -786,8 +1029,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.samples.append(item)
             except ERRORS as ex:
                 problems.append(str(ex))
-        if len(self.samples) > ins.MAX_WAVESAMPLES:
-            del self.samples[ins.MAX_WAVESAMPLES:]
+        excess = len(self.all_items()) - ins.MAX_WAVESAMPLES
+        if excess > 0:
+            del self.samples[len(self.samples) - excess:]
             problems.append(T("Un instrument contient au maximum 127 sons."))
         self.samples.sort(key=lambda s: s.root)
         if self.name_edit.text() in ("", T("NOUVEAU")) and self.samples:
@@ -905,6 +1149,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.empty_hint.setVisible(not self.samples)
         self.refresh_keyboard()
         self.refresh_estimate()
+        self.refresh_layer_bar()
         self._update_buttons()
 
     def refresh_keyboard(self):
@@ -1033,15 +1278,25 @@ class MainWindow(QtWidgets.QMainWindow):
         return int((b - a + 1) * rate / item.rate), rate
 
     def estimated_blocks(self) -> tuple[int, float]:
-        total_bytes, seconds = ins.INST_SIZE + ins.LAYER_SIZE, 0.0
-        for item in self.samples:
+        """Taille de l'instrument (tous les layers). Les sons de la disquette non retravailles
+        gardent leurs echantillons, partages entre copies : chaque groupe ne compte qu'une fois."""
+        total_bytes, seconds = ins.INST_SIZE + ins.LAYER_SIZE * len(self.layers), 0.0
+        pools = set()
+        for item in self.all_items():
             n, rate = self.output_length(item)
-            total_bytes += ins.WS_PARAM_SIZE + 2 * ((n + ins.GUARD_WORDS + 7) & ~7)
             seconds += n / rate
+            if item.ws is not None and item.ws.pool is not None and not item.edited:
+                total_bytes += ins.WS_PARAM_SIZE
+                if id(item.ws.pool) not in pools:
+                    pools.add(id(item.ws.pool))
+                    total_bytes += len(item.ws.pool.raw)
+            else:
+                total_bytes += ins.WS_PARAM_SIZE + 2 * ((n + ins.GUARD_WORDS + 7) & ~7)
         return -(-total_bytes // 512), seconds
 
     def refresh_estimate(self):
-        if not self.samples:
+        items = self.all_items()
+        if not items:
             self.estimate.setText("")
             return
         blocks, seconds = self.estimated_blocks()
@@ -1049,7 +1304,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.editing_name is not None:
             old = self.disk.find(self.editing_name)
             free += old.blocks if old else 0
-        text = (T("{0} son(s), {1:.1f} s — environ {2} blocs ({3} Ko) pour {4} blocs libres sur la disquette.").format(len(self.samples), seconds, blocks, blocks // 2, free))
+        text = (T("{0} son(s), {1:.1f} s — environ {2} blocs ({3} Ko) pour {4} blocs libres sur la disquette.").format(len(items), seconds, blocks, blocks // 2, free))
+        if len(self.layers) > 1:
+            text = T("{0} layers, ").format(len(self.layers)) + text
         if blocks > free:
             text = f"<span style='color:#C0392B'><b>Trop gros pour la disquette.</b> {text}</span>"
         self.estimate.setText(text)
@@ -1065,9 +1322,9 @@ class MainWindow(QtWidgets.QMainWindow):
         return project.SampleSpec(item.path, item.root, item.lo, item.hi, item.loop, item.name, None,
                                   copy(item.edit), item.sound)
 
-    def check_zones(self) -> str:
+    def check_zones(self, samples: list[SampleItem] | None = None) -> str:
         used = {}
-        for s in self.samples:
+        for s in (self.samples if samples is None else samples):
             if s.lo > s.hi:
                 return T("« {0} » : le bas de la zone est au-dessus du haut.").format(s.name)
             for k in range(s.lo, s.hi + 1):
@@ -1081,14 +1338,24 @@ class MainWindow(QtWidgets.QMainWindow):
         if not name:
             self.error(T("Donnez un nom à l'instrument."))
             return None
-        problem = self.check_zones()
-        if problem:
-            self.error(problem)
-            return None
-        return project.make_instrument(name, self.specs(), rate_hz=ins.rate_hz(self.rate_code()),
-                                       normalize=self.normalize.isChecked(), trim=self.trim.isChecked(),
-                                       envelope=self.env_box.currentData(),
-                                       base=self.editing_base if self.editing_name is not None else None)
+        self.layers[self.current].auto = self.auto_zones.isChecked()
+        for i, layer in enumerate(self.layers):
+            where = T("Layer {0} ({1}) : ").format(layer.slot + 1, layer.name.strip()) if len(self.layers) > 1 else ""
+            if not layer.samples:
+                self.show_layer(i)
+                self.error(T("{0}ce layer n'a aucun son : ajoutez-en ou supprimez le layer.").format(where))
+                return None
+            problem = self.check_zones(layer.samples)
+            if problem:
+                self.show_layer(i)
+                self.error(where + problem)
+                return None
+        specs = [project.LayerSpec([self.spec_for(s) for s in layer.samples], layer.name, layer.vel_lo, layer.vel_hi,
+                                   layer.patches, layer.base, layer.slot) for layer in self.layers]
+        return project.make_layered_instrument(name, specs, rate_hz=ins.rate_hz(self.rate_code()),
+                                               normalize=self.normalize.isChecked(), trim=self.trim.isChecked(),
+                                               envelope=self.env_box.currentData(),
+                                               base=self.editing_base if self.editing_name is not None else None)
 
     def render_item(self, item: SampleItem) -> ins.Wavesample:
         """Le son tel qu'il sera ecrit dans l'instrument (conversion gardee en memoire)."""
@@ -1194,39 +1461,44 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # ------------------------------------------------------------------ modification d'un instrument
     def new_instrument(self):
-        if self.samples and not self.confirm(T("Vider l'éditeur d'instrument ?"),
-                                             T("Les sons listés seront retirés de l'éditeur. La disquette n'est pas modifiée.")):
+        if self.all_items() and not self.confirm(T("Vider l'éditeur d'instrument ?"),
+                                                 T("Les sons listés seront retirés de l'éditeur. La disquette n'est pas modifiée.")):
             return
-        self.samples = []
+        self.layers, self.current = [LayerState.new(0)], 0
         self.editing_name = self.editing_base = None
         self.name_edit.setText(T("NOUVEAU"))
         self.auto_zones.setChecked(True)
-        self.refresh_samples()
+        self._shown = None
+        self.refresh_samples([])
 
     def load_into_editor(self, name: str) -> bool:
         entry = self.disk.find(name)
         if entry is None:
             return False
         inst = ins.parse_instrument(self.disk.read_file(entry))
-        if len(inst.layers) != 1:
-            raise ins.InstrumentError(
-                T("« {0} » contient {1} layers. L'éditeur ne gère pour l'instant que les instruments à "
-                  "un seul layer ; celui-ci peut être déplacé, supprimé ou exporté en WAV.").format(entry.name.strip(), len(inst.layers)))
-        self.samples = [SampleItem.from_wavesample(ws)
-                        for ws in sorted(inst.layers[0].wavesamples, key=lambda w: w.key_lo)]
+        slots = ins.assign_slots(inst.layers)
+        self.layers = []
+        for layer, slot in sorted(zip(inst.layers, slots), key=lambda p: p[1]):
+            items = [SampleItem.from_wavesample(ws) for ws in sorted(layer.wavesamples, key=lambda w: w.key_lo)]
+            patches = layer.patches if layer.patches is not None else ins.default_patches(slot)
+            # Zones conservees telles qu'elles sont (pas de zones automatiques).
+            self.layers.append(LayerState(slot, layer.name, layer.vel_lo, layer.vel_hi, frozenset(patches), items,
+                                          False, layer))
+        self.current = 0
         self.editing_name, self.editing_base = entry.name, inst
         self.name_edit.setText(entry.name.strip())
         self.auto_zones.blockSignals(True)
-        self.auto_zones.setChecked(False)                  # on conserve les zones telles qu'elles sont
+        self.auto_zones.setChecked(False)
         self.auto_zones.blockSignals(False)
-        self.refresh_samples()
+        self._shown = None
+        self.refresh_samples([])
         return True
 
     def edit_selected(self):
         entry = self.selected_entry()
         if entry is None or entry.file_type != TYPE_EPS_INSTRUMENT:
             return
-        if self.samples and self.editing_name != entry.name and not self.confirm(
+        if self.all_items() and self.editing_name != entry.name and not self.confirm(
                 T("Charger « {0} » dans l'éditeur ?").format(entry.name.strip()),
                 T("Les sons actuellement listés dans l'éditeur seront retirés.")):
             return
@@ -1279,11 +1551,23 @@ class MainWindow(QtWidgets.QMainWindow):
             if slot is not None:
                 self.import_from_slot(slot)
 
-    def _dropped_on_key(self, _mime: str, text: str, row: int):
+    def _dropped_on_key(self, mime: str, text: str, row: int):
+        if self.key is None:
+            return
+        target = self._slots[row] if 0 <= row < len(self._slots) else None
+        if mime == MIME_SLOT:
+            # Un emplacement glisse sur un autre : il prend son numero (les deux s'echangent).
+            source = next((s for s in self._slots if s.filename == text), None)
+            if source is None or target is None or source is target:
+                return
+            if self.key.mode != usbkey.MODE_HXC or source.number is None or target.number is None:
+                self.statusBar().showMessage(T("En mode FlashFloppy, l'ordre suit les noms : utilisez « Renommer… »."), 8000)
+                return
+            self.set_slot_number(source, target.number)
+            return
         names = [n for n in text.split("\n") if n]
-        slot = self._slots[row] if 0 <= row < len(self._slots) else None
-        if names and self.key is not None:
-            self.copy_files_to_slot(names, slot)
+        if names:
+            self.copy_files_to_slot(names, target)
 
     def move_entries_to(self, names: list[str], row: int):
         """Reorganisation par glisser-deposer : les fichiers passent devant la ligne visee. L'OS reste en tete."""
@@ -1722,6 +2006,152 @@ class MainWindow(QtWidgets.QMainWindow):
         finally:
             while QtWidgets.QApplication.overrideCursor():
                 QtWidgets.QApplication.restoreOverrideCursor()
+
+    # ------------------------------------------------------------------ gestion des emplacements
+    def _key_changed(self, renames: dict[str, str], select: str | None = None, message: str = ""):
+        """Apres une operation sur la cle : suit la disquette ouverte si son fichier a change de nom,
+        relit la cle et reselectionne l'emplacement voulu."""
+        if self.disk_file is not None:
+            new = next((n for o, n in renames.items() if o.upper() == self.disk_file.upper()), None)
+            if new is not None:
+                self.disk_file = new
+                m = usbkey._SLOT_RE.match(new)
+                self.disk_name = T("Emplacement {0}").format(f"{int(m.group(1)):03d}") if m and self.key.mode == usbkey.MODE_HXC else new
+                self.refresh_disk()
+        self.refresh_key()
+        if select:
+            for row, slot in enumerate(self._slots):
+                if slot.filename.upper() == select.upper():
+                    self.key_table.selectRow(row)
+        if message:
+            self.statusBar().showMessage(message, 8000)
+
+    def set_slot_number(self, slot, number: int):
+        if slot.number is None or number == slot.number:
+            return
+        try:
+            other = next((s for s in self._slots if s.number == number), None)
+            freed = self.key.move(slot, number)
+            renames = {slot.filename: self.key.filename_for(number)}
+            if other is not None and freed is None:
+                renames[other.filename] = self.key.filename_for(slot.number)
+            text = (T("Emplacements {0} et {1} échangés.").format(f"{slot.number:03d}", f"{number:03d}") if other is not None
+                    else T("Emplacement {0} déplacé en {1}.").format(f"{slot.number:03d}", f"{number:03d}"))
+            self._key_changed(renames, self.key.filename_for(number), text)
+        except ERRORS as ex:
+            self.error(ex)
+            self.refresh_key()
+
+    def move_slot(self, delta: int):
+        slot = self.selected_slot()
+        if self.key is None or slot is None or slot.number is None:
+            return
+        number = slot.number + delta
+        if 0 <= number <= usbkey.MAX_SLOT:
+            self.set_slot_number(slot, number)
+
+    def renumber_or_rename_slot(self):
+        slot = self.selected_slot()
+        if self.key is None or slot is None:
+            return
+        if self.key.mode == usbkey.MODE_HXC and slot.number is not None:
+            number, ok = QtWidgets.QInputDialog.getInt(
+                self, T("Numéro de l'emplacement"),
+                T("Nouveau numéro pour l'emplacement {0} :\n(s'il est déjà pris, les deux emplacements échangent leurs numéros)").format(slot.title),
+                slot.number, 0, usbkey.MAX_SLOT)
+            if ok:
+                self.set_slot_number(slot, number)
+            return
+        filename, ok = QtWidgets.QInputDialog.getText(self, T("Renommer"), T("Nouveau nom du fichier sur la clé :"),
+                                                      text=slot.filename)
+        if not ok or not filename.strip():
+            return
+        try:
+            new = self.key.rename(slot, filename)
+            self._key_changed({slot.filename: new}, new, T("{0} renommé en {1}.").format(slot.filename, new))
+        except ERRORS as ex:
+            self.error(ex)
+
+    def delete_slot(self):
+        slot = self.selected_slot()
+        if self.key is None or slot is None:
+            return
+        detail = T("Contenu : {0}\nL'image sera déplacée dans le dossier {1} de la clé : vous pourrez la récupérer.").format(slot.describe(), usbkey.TRASH_DIR)
+        if slot.summary and slot.summary.has_os:
+            detail += T("\n\nATTENTION : cet emplacement contient l'OS de l'EPS.")
+        if not self.confirm(T("Supprimer l'emplacement {0} ?").format(slot.title), detail):
+            return
+        try:
+            dest = self.key.delete(slot)
+            if self.disk_file and self.disk_file.upper() == slot.filename.upper():
+                self.disk_file = None                  # la disquette ouverte n'a plus de fichier sur la cle
+                self.disk_dirty = True
+                self.refresh_disk()
+            self._key_changed({}, None, T("Emplacement {0} mis à la corbeille : {1}").format(slot.title, dest))
+        except ERRORS as ex:
+            self.error(ex)
+
+    def add_blank_slot(self):
+        if self.key is None:
+            return
+        try:
+            if self.key.mode == usbkey.MODE_HXC:
+                filename = self.key.filename_for(self.key.next_free_number())
+            else:
+                filename, ok = QtWidgets.QInputDialog.getText(self, T("Nouveau fichier"), T("Nom du fichier sur la clé :"),
+                                                              text=T("VIERGE") + ".hfe")
+                if not ok or not filename.strip():
+                    return
+            path = self.key.add_blank(filename)
+            name = os.path.basename(path)
+            self._key_changed({}, name, T("Disquette vierge écrite : {0}").format(name))
+        except ERRORS as ex:
+            self.error(ex)
+
+    def import_image_slot(self):
+        if self.key is None:
+            return
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, T("Image de disquette à copier sur la clé"),
+                                                        self.last_dir("img_dir"), T("Images de disquette (*.hfe *.img);;Tous les fichiers (*)"))
+        if not path:
+            return
+        self.keep_dir("img_dir", path)
+        try:
+            if self.key.mode == usbkey.MODE_HXC:
+                filename = self.key.filename_for(self.key.next_free_number())
+            else:
+                stem = os.path.splitext(os.path.basename(path))[0]
+                filename, ok = QtWidgets.QInputDialog.getText(self, T("Nouveau fichier"), T("Nom du fichier sur la clé :"),
+                                                              text=stem + ".hfe")
+                if not ok or not filename.strip():
+                    return
+            QtWidgets.QApplication.setOverrideCursor(Qt.WaitCursor)
+            dest = self.key.add_from_file(path, filename)
+            QtWidgets.QApplication.restoreOverrideCursor()
+            name = os.path.basename(dest)
+            self._key_changed({}, name, T("{0} copiée sur la clé : {1}").format(os.path.basename(path), name))
+        except ERRORS as ex:
+            QtWidgets.QApplication.restoreOverrideCursor()
+            self.error(ex)
+
+    def compact_slots(self):
+        if self.key is None or self.key.mode != usbkey.MODE_HXC:
+            return
+        if not self.confirm(T("Renuméroter les emplacements 000, 001, 002… sans trous ?"),
+                            T("L'ordre est conservé. Sur le Gotek, les numéros des disquettes changeront.")):
+            return
+        selected = self.selected_slot()
+        try:
+            moves = dict(self.key.compact())
+            select = moves.get(selected.filename, selected.filename) if selected else None
+            self._key_changed(moves, select, T("{0} emplacement(s) renuméroté(s).").format(len(moves)))
+        except ERRORS as ex:
+            self.error(ex)
+            self.refresh_key()
+
+    def open_trash(self):
+        if self.key is not None and os.path.isdir(self.key.trash_folder()):
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(self.key.trash_folder()))
 
     def save_catalog(self):
         if self.key is None:
